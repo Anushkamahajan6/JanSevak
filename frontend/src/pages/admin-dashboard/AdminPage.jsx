@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from "react-router-dom";
+import HeatmapView from '../../Components/heatmapview';
 
 export default function AdminPage() {
 
@@ -147,21 +148,15 @@ export default function AdminPage() {
           <div className="grid grid-cols-3 gap-4">
 
             {/* MAP */}
-            <div className="col-span-2 bg-white border rounded-xl p-4 h-[350px] flex flex-col">
+            <div className="col-span-2 bg-white border rounded-xl p-4 h-[350px] flex flex-col overflow-hidden">
 
               <div className="flex justify-between items-center mb-2">
                 <h3 className="text-sm font-medium">Live Heatmap</h3>
                 <span className="text-xs text-gray-400">Real-time</span>
               </div>
 
-              <div className="flex-1 flex flex-col items-center justify-center text-gray-300 text-sm gap-3">
-                <p>Map Integration Area</p>
-
-                <Link to="/admin/heatmap">
-                  <button className="bg-indigo-100 text-indigo-700 px-4 py-1 rounded-lg text-xs">
-                    Open Full Heatmap
-                  </button>
-                </Link>
+              <div className="flex-1 overflow-hidden">
+                <HeatmapView />
               </div>
 
             </div>

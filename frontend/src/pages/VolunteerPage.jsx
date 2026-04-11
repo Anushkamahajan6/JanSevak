@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import HeatmapView from '../components/HeatmapView'; // Adjust path if your Heatmap is saved elsewhere!
+import HeatmapView from '../Components/heatmapview';
 
 export default function VolunteerPage() {
   // --- STATE ---
