@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Bell,
   LayoutDashboard,
@@ -9,8 +9,22 @@ import {
   Settings,
   Plus,
 } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+  const location = useLocation();
+const [showNotifications, setShowNotifications] = useState(false);
+
+const [notifications, setNotifications] = useState([
+  { id: 1, text: "Your garbage issue was resolved ✅", read: false },
+  { id: 2, text: "New reward unlocked 🎁", read: false },
+  { id: 3, text: "Volunteer assigned to your report 👷", read: true },
+]);
+  const [userName, setUserName] = useState("Arjun");
+  const [editingName, setEditingName] = useState(false);
+  const [newQuery, setNewQuery] = useState("");
+
   const stats = [
     {
       title: "Issues Filed",
@@ -74,13 +88,19 @@ export default function Dashboard() {
   ];
 
   const nav = [
-    { name: "Dashboard", icon: LayoutDashboard, active: true },
-    { name: "My Issues", icon: Clock3 },
-    { name: "File New Issue", icon: FilePlus2 },
-    { name: "Points & Rewards", icon: Gift },
-    { name: "Profile", icon: User },
-    { name: "Settings", icon: Settings },
+    { name: "Dashboard", icon: LayoutDashboard, path: "/user" },
+    { name: "My Issues", icon: Clock3, path: "/user/issues" },
+    { name: "File New Issue", icon: FilePlus2, path: "/user/report" },
+    { name: "Points & Rewards", icon: Gift, path: "/user/rewards" },
+    { name: "Profile", icon: User, path: "/user/profile" },
+    { name: "Settings", icon: Settings, path: "/user/settings" },
   ];
+
+  const [queries, setQueries] = useState([
+    "Garbage overflow near canteen",
+    "Broken street light in Block C",
+    "Water leakage in Hostel B",
+  ]);
 
   const getStatus = (status) => {
     if (status === "Resolved") return "bg-green-100 text-green-700";
@@ -91,10 +111,10 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col">
+      <aside className="w-64 min-w-[256px] flex-shrink-0 bg-white border-r border-slate-200 flex flex-col h-screen sticky top-0">
         <div className="p-6 border-b border-slate-200">
-          <div className="w-12 h-12 text-lg bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold">
-            J
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg bg-indigo-100">
+            🏛️
           </div>
 
           <h1 className="mt-3 text-lg font-bold text-slate-800">JanSevak</h1>
@@ -104,12 +124,14 @@ export default function Dashboard() {
         <nav className="p-3 space-y-1">
           {nav.map((item, i) => {
             const Icon = item.icon;
+
             return (
               <button
                 key={i}
+                onClick={() => navigate(item.path)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition ${
-                  item.active
-                    ? "bg-indigo-50 text-indigo-700 font-semibold"
+                  location.pathname === item.path
+                    ? "bg-indigo-600 text-white font-semibold shadow-md"
                     : "text-slate-600 hover:bg-slate-100"
                 }`}
               >
@@ -117,7 +139,7 @@ export default function Dashboard() {
                 {item.name}
 
                 {item.name === "My Issues" && (
-                  <span className="ml-auto text-xs bg-indigo-600 text-white px-2 py-0.5 rounded-full">
+                  <span className="ml-auto text-xs bg-white text-indigo-600 px-2 py-0.5 rounded-full">
                     3
                   </span>
                 )}
@@ -132,7 +154,9 @@ export default function Dashboard() {
           </div>
 
           <div>
-            <p className="text-sm font-semibold text-slate-800">Arjun Kumar</p>
+            <p className="text-sm font-semibold text-slate-800">
+              {userName} Kumar
+            </p>
             <p className="text-xs text-slate-500">Reporter</p>
           </div>
         </div>
@@ -143,21 +167,91 @@ export default function Dashboard() {
         {/* Topbar */}
         <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-800">
-              Good morning, Arjun
-            </h2>
+            <div className="flex items-center gap-2">
+              {editingName ? (
+                <input
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  className="border rounded-lg px-2 py-1"
+                />
+              ) : (
+                <h2 className="text-lg font-semibold text-slate-800">
+                  Good morning, {userName}
+                </h2>
+              )}
+
+              <button
+                onClick={() => setEditingName(!editingName)}
+                className="text-xs text-indigo-600"
+              >
+                {editingName ? "Save" : "Edit"}
+              </button>
+            </div>
+
             <p className="text-sm text-slate-500">
               Saturday, 11 April 2026 — SRM Campus
             </p>
           </div>
 
           <div className="flex items-center gap-3">
-            <button className="relative w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center bg-white">
-              <Bell size={18} />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+           <div className="relative">
+  <button
+    onClick={() => setShowNotifications(!showNotifications)}
+    className="relative w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center bg-white hover:bg-slate-50"
+  >
+    <Bell size={18} />
 
-            <button className="bg-indigo-600 hover:bg-indigo-700 hover:scale-105 transition text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2">
+    {notifications.filter((n) => !n.read).length > 0 && (
+      <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 text-[10px] bg-red-500 text-white rounded-full flex items-center justify-center">
+        {notifications.filter((n) => !n.read).length}
+      </span>
+    )}
+  </button>
+
+  {showNotifications && (
+    <div className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-4">
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="font-semibold text-slate-800">
+          Notifications
+        </h3>
+
+        <button
+          onClick={() =>
+            setNotifications(
+              notifications.map((n) => ({
+                ...n,
+                read: true,
+              }))
+            )
+          }
+          className="text-xs text-indigo-600"
+        >
+          Mark all read
+        </button>
+      </div>
+
+      <div className="space-y-2 max-h-72 overflow-y-auto">
+        {notifications.map((item) => (
+          <div
+            key={item.id}
+            className={`p-3 rounded-xl text-sm border ${
+              item.read
+                ? "bg-slate-50 border-slate-100 text-slate-500"
+                : "bg-indigo-50 border-indigo-100 text-slate-800"
+            }`}
+          >
+            {item.text}
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+</div>
+
+            <button
+              onClick={() => navigate("/user/report")}
+              className="bg-indigo-600 hover:bg-indigo-700 hover:scale-105 transition text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2"
+            >
               <Plus size={16} />
               File New Issue
             </button>
@@ -195,7 +289,10 @@ export default function Dashboard() {
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-semibold text-slate-800">Recent Issues</h3>
 
-                <button className="text-sm text-indigo-600 font-medium">
+                <button
+                  onClick={() => navigate("/user/issues")}
+                  className="text-sm text-indigo-600 font-medium"
+                >
                   See all →
                 </button>
               </div>
@@ -206,15 +303,16 @@ export default function Dashboard() {
                     key={i}
                     className="border border-slate-200 rounded-xl p-4 flex items-center gap-3 hover:bg-slate-50 transition"
                   >
-                    <div className="w-12 h-12 text-lg bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold">
-  J
-</div>
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${item.bg}`}
+                    >
+                      {item.emoji}
+                    </div>
 
                     <div className="flex-1">
                       <p className="font-medium text-sm text-slate-800">
                         {item.title}
                       </p>
-
                       <p className="text-xs text-slate-500 mt-1">{item.meta}</p>
                     </div>
 
@@ -241,7 +339,10 @@ export default function Dashboard() {
                 <div className="flex justify-between">
                   <h3 className="font-semibold text-slate-800">Your Points</h3>
 
-                  <button className="text-sm text-indigo-600">
+                  <button
+                    onClick={() => navigate("/user/rewards")}
+                    className="text-sm text-indigo-600"
+                  >
                     Rewards →
                   </button>
                 </div>
@@ -292,9 +393,49 @@ export default function Dashboard() {
             </div>
           </section>
 
+          {/* Previous Queries */}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200 hover:shadow-xl transition duration-300">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold text-slate-800">
+                Previous Queries
+              </h3>
+            </div>
+
+            <div className="space-y-3">
+              {queries.map((item, i) => (
+                <div
+                  key={i}
+                  className="p-3 rounded-xl bg-slate-50 border border-slate-100"
+                >
+                  {item}
+                </div>
+              ))}
+
+              <div className="flex gap-2 pt-2">
+                <input
+                  value={newQuery}
+                  onChange={(e) => setNewQuery(e.target.value)}
+                  placeholder="Add new query"
+                  className="flex-1 border rounded-xl px-3 py-2"
+                />
+
+                <button
+                  onClick={() => {
+                    if (newQuery.trim()) {
+                      setQueries([...queries, newQuery]);
+                      setNewQuery("");
+                    }
+                  }}
+                  className="bg-indigo-600 text-white px-4 rounded-xl"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Row 3 */}
           <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Monthly Activity */}
             <div className="bg-white rounded-2xl p-5 border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition duration-300">
               <h3 className="font-semibold text-slate-800 mb-4">
                 Monthly Activity
@@ -316,7 +457,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Tracker */}
             <div className="bg-white rounded-2xl p-5 border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition duration-300">
               <h3 className="font-semibold text-slate-800 mb-4">
                 Issue Tracker
@@ -344,7 +484,6 @@ export default function Dashboard() {
               ))}
             </div>
 
-            {/* Hotspots */}
             <div className="bg-white rounded-2xl p-5 border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition duration-300">
               <h3 className="font-semibold text-slate-800 mb-4">
                 Community Hotspots
