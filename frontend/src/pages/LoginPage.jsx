@@ -39,11 +39,15 @@ function Login() {
         role: data.user.role,
       });
 
-      // ✅ Navigate
-      if (data.user.role === "user") {
+      // ✅ Navigate based on role
+      if (data.user.role === "volunteer") {
+        navigate("/volunteer");
+      } else if (data.user.role === "user") {
         navigate("/user");
-      } else {
+      } else if (data.user.role === "admin") {
         navigate("/admin");
+      } else {
+        navigate("/"); // Fallback to login if role is unknown
       }
 
     } catch (err) {

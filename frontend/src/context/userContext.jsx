@@ -13,7 +13,8 @@ export const UserProvider = ({ children }) => {
       });
 
       if (!res.ok) {
-        // ❗ Don't instantly log out on 401
+        // ❗ Don't instantly log out on 401 or 404
+        console.warn('Profile endpoint not available:', res.status);
         setLoading(false);
         return;
       }
@@ -26,7 +27,7 @@ export const UserProvider = ({ children }) => {
       });
 
     } catch (err) {
-      console.log(err);
+      console.warn('Profile fetch error:', err.message);
     } finally {
       setLoading(false);
     }
