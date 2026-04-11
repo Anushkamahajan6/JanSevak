@@ -5,6 +5,7 @@ import AdminPage from "./pages/AdminPage";
 import VolunteerPage from "./pages/VolunteerPage";
 import Dashboard from "./pages/user-dashboard/Dashboard";
 import AdminHeatmap from "./Components/AdminHeatmap";
+import heatmapview from "./Components/heatmapview";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/volunteer" element={<VolunteerPage />} />
         <Route path="/user" element={<Dashboard />} />
         <Route path="/admin/heatmap" element={<AdminHeatmap />} />
+        <Route path="/heatmap" element={<heatmapview />} />
       </Routes>
     </BrowserRouter>
   );

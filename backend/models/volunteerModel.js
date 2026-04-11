@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const volunteerSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -19,4 +19,4 @@ const volunteerSchema = new mongoose.Schema({
   }]
 }, { timestamps: true });
 
-export default mongoose.model('Volunteer', volunteerSchema);
+module.exports = mongoose.model('Volunteer', volunteerSchema);

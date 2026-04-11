@@ -1,10 +1,10 @@
-import express from 'express';
-import { 
-    createProfile, 
-    getNearbyTasks, 
-    applyForTask, 
-    submitProof 
-} from '../controllers/volunteerController.js';
+const express = require('express');
+const {
+    createProfile,
+    getNearbyTasks,
+    applyForTask,
+    submitProof
+} = require('../controllers/volunteerController');
 
 const router = express.Router();
 
@@ -21,4 +21,4 @@ router.post('/apply', applyForTask);
 // (Later, add a multer middleware here like: upload.fields([{name: 'before'}, {name: 'after'}]), submitProof)
 router.post('/submit-proof', submitProof);
 
-export default router;
+module.exports = router;

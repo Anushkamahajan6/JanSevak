@@ -35,7 +35,8 @@ const AdminHeatmap = () => {
                         0.6, 'rgb(255,255,0)',
                         1, 'rgb(255,0,0)'
                     ],
-                    'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 2, 15, 20]
+                    'heatmap-radius':50,
+                    'heatmap-opacity': 0.9
                 }
             });
         });

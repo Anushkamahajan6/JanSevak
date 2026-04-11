@@ -1,5 +1,7 @@
-const router = require('express').Router();
+const express = require('express');
 const Issue = require('../models/Issue');
+
+const router = express.Router();
 
 router.get('/api/heatmap', async (req, res) => {
     try {
