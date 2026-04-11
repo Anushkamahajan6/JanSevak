@@ -89,7 +89,7 @@ const [notifications, setNotifications] = useState([
 
   const nav = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/user" },
-    { name: "My Issues", icon: Clock3, path: "/user/issues" },
+    { name: "My Issues", icon: Clock3, path: "/user/my-issues" },
     { name: "File New Issue", icon: FilePlus2, path: "/user/report" },
     { name: "Points & Rewards", icon: Gift, path: "/user/rewards" },
     { name: "Profile", icon: User, path: "/user/profile" },

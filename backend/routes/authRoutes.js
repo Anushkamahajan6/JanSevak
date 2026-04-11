@@ -21,13 +21,13 @@ router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.trim() });
 
     if (!user) {
       return res.status(400).json({ message: "Invalid Credentials" });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password.trim(), user.password);
 
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid Credentials" });
@@ -62,15 +62,15 @@ router.post("/login", async (req, res) => {
 router.post("/signup", async (req, res) => {
   try {
     const { name, email, password,role } = req.body;
-    const existinguser = await User.findOne({ email });
+    const existinguser = await User.findOne({ email: email.trim() });
     if (existinguser) {
       return res.status(400).json({ message: "User already Exists" });
     }
     const salt = await bcrypt.genSalt(10);
-    const hashedpassword = await bcrypt.hash(password, salt);
+    const hashedpassword = await bcrypt.hash(password.trim(), salt);
     const newuser = new User({
-      name,
-      email,
+      name: name.trim(),
+      email: email.trim(),
       password: hashedpassword,
       role: role || "user",
     });
