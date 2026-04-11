@@ -29,7 +29,7 @@ const Issue = require('./models/Issue');
 
 // Use routes
 app.use('/admin', adminRoutes);
-app.use('/user', userRoutes);
+app.use('/api/user', userRoutes);
 app.use('/volunteer', volunteerRoutes);
 app.use('/api/heatmap', heatmapRoutes);
 

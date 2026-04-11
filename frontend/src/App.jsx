@@ -4,7 +4,7 @@ import Signup from "./pages/SignupPage";
 import AdminPage from "./pages/AdminPage";
 import VolunteerPage from "./pages/VolunteerPage";
 import Dashboard from "./pages/user-dashboard/Dashboard";
-import MapView from "./Components/MapView";
+import AdminHeatmap from "./Components/AdminHeatmap";
 
 function App() {
   return (
@@ -15,7 +15,7 @@ function App() {
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/volunteer" element={<VolunteerPage />} />
         <Route path="/user" element={<Dashboard />} />
-        <Route path="/map" element={<MapView />} />
+        <Route path="/admin/heatmap" element={<AdminHeatmap />} />
       </Routes>
     </BrowserRouter>
   );
