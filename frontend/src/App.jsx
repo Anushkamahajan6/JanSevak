@@ -4,6 +4,8 @@ import Signup from "./pages/SignupPage";
 import AdminPage from "./pages/AdminPage";
 import VolunteerPage from "./pages/VolunteerPage";
 import Dashboard from "./pages/user-dashboard/Dashboard";
+import MapView from "./Components/MapView";
+
 function App() {
   return (
     <BrowserRouter>
@@ -13,6 +15,7 @@ function App() {
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/volunteer" element={<VolunteerPage />} />
         <Route path="/user" element={<Dashboard />} />
+        <Route path="/map" element={<MapView />} />
       </Routes>
     </BrowserRouter>
   );
