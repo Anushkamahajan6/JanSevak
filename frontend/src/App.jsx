@@ -2,8 +2,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/LoginPage";
 import Signup from "./pages/SignupPage";
 import AdminPage from "./pages/AdminPage";
-import UserPage from "./pages/UserPage";
 import VolunteerPage from "./pages/VolunteerPage";
+import Dashboard from "./pages/user-dashboard/Dashboard";
+import AdminHeatmap from "./Components/AdminHeatmap";
 
 function App() {
   return (
@@ -12,8 +13,9 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/admin" element={<AdminPage />} />
-        <Route path="/user" element={<UserPage />} />
         <Route path="/volunteer" element={<VolunteerPage />} />
+        <Route path="/user" element={<Dashboard />} />
+        <Route path="/admin/heatmap" element={<AdminHeatmap />} />
       </Routes>
     </BrowserRouter>
   );

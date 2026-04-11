@@ -40,10 +40,10 @@ function Login() {
       });
 
       // ✅ Navigate
-      if (data.user.role === "admin") {
-        navigate("/dashboard");
+      if (data.user.role === "user") {
+        navigate("/user");
       } else {
-        navigate("/workspace");
+        navigate("/admin");
       }
 
     } catch (err) {
