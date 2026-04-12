@@ -14,13 +14,6 @@ export default function VolunteerPage() {
     ngoName: "",
   });
 
-<<<<<<< HEAD
-  // Lead Feature State
-  const [additionalCount, setAdditionalCount] = useState(1);
-
-  // 1. Fetch tasks on load
-=======
->>>>>>> 021d16bbf91163a4c3568aaf78556b58e60f48d0
   useEffect(() => {
     const fetchTasks = async () => {
       try {
@@ -57,7 +50,6 @@ export default function VolunteerPage() {
     }
   };
 
-  // "I want to help" from task card — uses express-interest endpoint
   const handleApply = async (issueId) => {
     if (!currentUser?._id) return alert("Please register first.");
     try {
@@ -74,32 +66,6 @@ export default function VolunteerPage() {
     }
   };
 
-<<<<<<< HEAD
-  // 4. Handle "I need more people" (Lead Feature)
-  const handleRequestMore = async (taskId) => {
-    if (!taskId) {
-        alert("Please enter a valid Task ID first!");
-        return;
-    }
-    try {
-      const response = await fetch('http://localhost:5000/api/volunteer/request-more', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          taskId: taskId,
-          additionalCount: parseInt(additionalCount)
-        })
-      });
-      const data = await response.json();
-      alert(data.message || data.error);
-    } catch (error) {
-      console.error("Error requesting more people:", error);
-    }
-  };
-
-  // --- UI: REGISTRATION SCREEN ---
-  if (!isRegistered) {
-=======
   const toggleVolunteerStatus = async () => {
     try {
       const res = await fetch("http://localhost:5000/api/volunteer/status", {
@@ -121,7 +87,6 @@ export default function VolunteerPage() {
   };
 
   if (loading) {
->>>>>>> 021d16bbf91163a4c3568aaf78556b58e60f48d0
     return (
       <div style={styles.loadingPage}>
         <div style={styles.loader}></div>
@@ -178,57 +143,6 @@ export default function VolunteerPage() {
       <div style={styles.overlay}></div>
       <div style={styles.dashboard}>
 
-<<<<<<< HEAD
-      {/* --- NEW: LEAD CONTROL PANEL (For Hackathon Demo) --- */}
-      <div style={{ marginBottom: '30px', padding: '20px', backgroundColor: '#fffbeb', borderRadius: '12px', border: '1px solid #fde68a' }}>
-        <h3 style={{ margin: '0 0 10px 0', color: '#b45309', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          👑 Lead Control Panel
-        </h3>
-        <p style={{ margin: '0 0 15px 0', fontSize: '14px', color: '#92400e' }}>
-          If you were assigned as the Primary Lead for a task, you can request backup from the waitlist here:
-        </p>
-        
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <input 
-            type="text" 
-            placeholder="Paste Task ID here..." 
-            id="demoTaskId"
-            style={{ padding: '10px', borderRadius: '6px', border: '1px solid #d97706', flex: 1 }}
-          />
-          <input 
-            type="number" 
-            min="1" max="10" 
-            value={additionalCount}
-            onChange={(e) => setAdditionalCount(e.target.value)}
-            style={{ padding: '10px', width: '80px', borderRadius: '6px', border: '1px solid #d97706' }}
-          />
-          <button 
-            onClick={() => handleRequestMore(document.getElementById('demoTaskId').value)}
-            style={{ backgroundColor: '#f59e0b', color: 'white', padding: '10px 20px', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
-          >
-            Request Backup
-          </button>
-        </div>
-      </div>
-
-      {/* Heatmap Section (Point 2) */}
-      <h2 style={{ color: '#1f2937', marginBottom: '15px' }}>Live Issue Heatmap</h2>
-      <div style={{ marginBottom: '40px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
-         <HeatmapView /> 
-      </div>
-
-      {/* Task List Section */}
-      <h2 style={{ color: '#1f2937', borderBottom: '2px solid #e5e7eb', paddingBottom: '10px' }}>Nearby Tasks</h2>
-      <div style={{ display: 'grid', gap: '20px', marginTop: '20px' }}>
-        {tasks.map((task, index) => (
-          <div key={index} style={{ border: '1px solid #e5e7eb', padding: '20px', borderRadius: '12px', backgroundColor: 'white' }}>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <h3 style={{ margin: '0 0 10px 0' }}>{task.category}</h3>
-              <span style={{ backgroundColor: '#fef08a', color: '#854d0e', padding: '4px 12px', borderRadius: '20px', fontSize: '14px', fontWeight: 'bold' }}>
-                +{task.pointsReward} pts
-              </span>
-=======
         {/* Sidebar */}
         <div style={styles.sidebar}>
           <div>
@@ -238,7 +152,6 @@ export default function VolunteerPage() {
                 <div style={styles.brandTitle}>JanSevak</div>
                 <div style={styles.brandSub}>Volunteer Hub</div>
               </div>
->>>>>>> 021d16bbf91163a4c3568aaf78556b58e60f48d0
             </div>
             <div style={styles.menuActive}>🏠 Dashboard</div>
             <div style={styles.menu}>🗺️ Heatmap</div>
@@ -275,44 +188,28 @@ export default function VolunteerPage() {
             </div>
           </div>
 
-          {/* Stats */}
-          <div style={styles.statsGrid}>
-            <div style={styles.statGlass}><h3>{tasks.length}</h3><p>Open Issues</p></div>
-            <div style={styles.statGlass}><h3>{currentUser.points}</h3><p>Total Points</p></div>
-            <div style={styles.statGlass}><h3>Live</h3><p>Heatmap Status</p></div>
-          </div>
-
-          {/* ✅ Heatmap — pass currentUser so "I Can Help" knows the volunteerId */}
+          {/* Heatmap */}
           <div style={styles.sectionGlass}>
             <h3 style={styles.sectionHeading}>📍 Live Issue Heatmap</h3>
-            <p style={{ color: '#94a3b8', fontSize: '13px', marginTop: '-12px', marginBottom: '14px' }}>
-              Click any red pin to see issue details and volunteer.
-            </p>
             <div style={{ borderRadius: "14px", overflow: "hidden", height: "400px" }}>
               <HeatmapView currentUser={currentUser} />
             </div>
           </div>
 
-          {/* Tasks from real DB */}
+          {/* Tasks */}
           <div style={styles.sectionGlass}>
             <h3 style={styles.sectionHeading}>🚀 Open Issues Near You</h3>
             {tasks.length === 0 ? (
-              <p style={{ color: '#94a3b8', fontSize: '14px' }}>No open issues right now. Check back later!</p>
+              <p>No open issues</p>
             ) : (
               <div style={styles.taskGrid}>
                 {tasks.map((task, index) => (
                   <div key={index} style={styles.taskCard}>
-                    <div style={styles.taskTop}>
-                      <h4 style={{ margin: 0 }}>{task.category}</h4>
-                      <span style={styles.reward}>+{task.pointsReward} pts</span>
-                    </div>
-                    <p style={styles.taskDesc}>{task.description}</p>
-                    <div style={styles.taskBottom}>
-                      <span style={{ fontSize: "13px" }}>📍 {task.address}</span>
-                      <button onClick={() => handleApply(task.reportId)} style={styles.btnSmall}>
-                        🙋 I Can Help
-                      </button>
-                    </div>
+                    <h4>{task.category}</h4>
+                    <p>{task.description}</p>
+                    <button onClick={() => handleApply(task.reportId)}>
+                      🙋 I Can Help
+                    </button>
                   </div>
                 ))}
               </div>
