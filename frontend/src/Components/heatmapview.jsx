@@ -2,9 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-// Set Mapbox token
-const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
-
 const HeatmapView = () => {
   const mapContainer = useRef(null);
   const map = useRef(null);
@@ -12,35 +9,30 @@ const HeatmapView = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Check if token is available
+    // Read token inside useEffect so Vite has time to inject it
+    const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
+
     if (!mapboxToken) {
       setError('Mapbox token is not configured. Please add VITE_MAPBOX_TOKEN to your .env file');
       setLoading(false);
       return;
     }
 
-    // Check if container exists
     if (!mapContainer.current) {
       setError('Map container is not available');
       setLoading(false);
       return;
     }
 
-    // Prevent double initialization
     if (map.current) return;
 
     try {
       mapboxgl.accessToken = mapboxToken;
 
-      // Clear container before initialization
-      if (mapContainer.current) {
-        mapContainer.current.innerHTML = '';
-      }
-
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/dark-v11',
-        center: [77.1025, 28.7041], // Delhi
+        center: [77.1025, 28.7041],
         zoom: 11,
       });
 
@@ -52,13 +44,12 @@ const HeatmapView = () => {
           });
         }
 
-        // Check if layer already exists
         if (!map.current.getLayer('issues-heat')) {
           map.current.addLayer({
             id: 'issues-heat',
             type: 'heatmap',
             source: 'issues-data',
-            maxzoom: 12, // Zoom badhne par heatmap gayab ho jayegi
+            maxzoom: 12,
             paint: {
               'heatmap-weight': ['interpolate', ['linear'], ['get', 'weight'], 0, 0, 1, 1],
               'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 15, 3],
@@ -81,24 +72,16 @@ const HeatmapView = () => {
             id: 'issues-pins',
             type: 'circle',
             source: 'issues-data',
-            minzoom: 8, // Kam zoom par bhi pins dikhenge
+            minzoom: 8,
             paint: {
-              // PIN COLOR BASED ON STATUS
               'circle-color': [
-                'match',
-                ['get', 'status'],
-                'pending', '#EF4444',     // Red
-                'in-progress', '#FBBF24',  // Yellow
-                'resolved', '#10B981',    // Green
-                '#888888'                 // Default Gray if status missing
+                'match', ['get', 'status'],
+                'pending', '#EF4444',
+                'in-progress', '#FBBF24',
+                'resolved', '#10B981',
+                '#888888'
               ],
-              // PIN SIZE
-              'circle-radius': [
-                'interpolate', ['linear'], ['zoom'],
-                10, 6,
-                15, 12
-              ],
-              // WHITE BORDER (McDonald's style)
+              'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 6, 15, 12],
               'circle-stroke-width': 2,
               'circle-stroke-color': '#ffffff'
             }
@@ -120,7 +103,6 @@ const HeatmapView = () => {
       setLoading(false);
     }
 
-    // Cleanup on unmount
     return () => {
       if (map.current) {
         map.current.remove();
@@ -132,27 +114,15 @@ const HeatmapView = () => {
   return (
     <div className="relative w-full h-full rounded-2xl overflow-hidden border border-slate-700 shadow-2xl bg-slate-900">
 
-      {/* Error State */}
       {error && (
         <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-900/95 backdrop-blur-sm gap-4 p-6">
           <div className="text-center">
             <h3 className="text-red-400 font-bold text-lg mb-2">⚠️ Map Error</h3>
             <p className="text-slate-300 text-sm">{error}</p>
-            <p className="text-slate-400 text-xs mt-3">
-              ⚡ To fix: Add your Mapbox token to <code className="bg-slate-800 px-2 py-1 rounded inline-block">.env</code>
-            </p>
-            <p className="text-slate-400 text-xs mt-2">Steps:</p>
-            <ol className="text-slate-400 text-xs mt-2 space-y-1 text-left inline-block">
-              <li>1. Get a free token from mapbox.com</li>
-              <li>2. Create <code className="bg-slate-800 px-2 py-1 rounded">.env</code> in frontend folder</li>
-              <li>3. Add: <code className="bg-slate-800 px-2 py-1 rounded">VITE_MAPBOX_TOKEN=your_token</code></li>
-              <li>4. Restart dev server</li>
-            </ol>
           </div>
         </div>
       )}
 
-      {/* Loading State */}
       {loading && !error && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-3">
@@ -162,7 +132,6 @@ const HeatmapView = () => {
         </div>
       )}
 
-      {/* Map UI Overlay */}
       {!error && (
         <div className="absolute top-4 left-4 z-10 space-y-2">
           <div className="bg-slate-800/90 backdrop-blur-md p-4 rounded-xl border border-white/10 shadow-lg">
@@ -171,8 +140,6 @@ const HeatmapView = () => {
               Live Issue Hotspots
             </h3>
             <p className="text-slate-400 text-xs mt-1">Real-time density from MongoDB Atlas</p>
-
-            {/* Heatmap Legend */}
             <div className="mt-4 space-y-2">
               <div className="flex items-center justify-between text-[10px] text-slate-400 uppercase tracking-tighter">
                 <span>Low Density</span>
@@ -184,7 +151,6 @@ const HeatmapView = () => {
         </div>
       )}
 
-      {/* Map Container */}
       <div ref={mapContainer} className="w-full h-full" />
     </div>
   );

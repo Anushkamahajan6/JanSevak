@@ -3,29 +3,33 @@ const Issue = require('../models/Issue');
 
 const router = express.Router();
 
-// routes/heatmap.js
-router.get('/api/heatmap', async (req, res) => {
+router.get('/heatmap', async (req, res) => {
     try {
-        // Hum volunteers ko bhi populate karenge taaki frontend pe dikha sakein
-        const issues = await Issue.find().populate('interestedVolunteers'); 
+        // ✅ FIX: Removed .populate('interestedVolunteers') — that field does not
+        //         exist in the Issue schema and was causing a Mongoose error/warning
+        const issues = await Issue.find();
+
         const geojson = {
             type: 'FeatureCollection',
             features: issues.map(issue => ({
                 type: 'Feature',
                 geometry: issue.location,
-                properties: { 
+                properties: {
                     id: issue._id,
-                    title: issue.title,
+                    title: issue.title || issue.category,
                     status: issue.status,
                     severity: issue.severity,
                     weight: issue.severity / 5,
-                    // Interested volunteers ka data stringify karke bhej rahe hain properties mein
-                    volunteers: JSON.stringify(issue.interestedVolunteers || [])
+                    category: issue.category,
                 }
             }))
         };
+
         res.json(geojson);
-    } catch (err) { res.status(500).json(err); }
+    } catch (err) {
+        console.error('Heatmap error:', err);
+        res.status(500).json({ error: 'Failed to fetch heatmap data' });
+    }
 });
 
 module.exports = router;
