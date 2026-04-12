@@ -23,6 +23,12 @@ export const updateIssueStatus    = (id, status)   => apiFetch(`/issues/${id}/st
   body: JSON.stringify({ status }),
 });
 
-export const approveVolunteer = (issueId, volId) => apiFetch(`/issue/${issueId}/approve/${volId}`, {
+export const approveVolunteer = (issueId, volunteerId) => apiFetch(`/issue/${issueId}/approve/${volunteerId}`, {
   method: 'POST',
+});
+
+export const approveVolunteerRequest = (volunteerId, issueId, approved) => apiFetch('/approve', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ volunteerId, issueId, approved }),
 });

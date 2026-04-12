@@ -8,6 +8,8 @@ const volunteerSchema = new mongoose.Schema({
   rating: { type: Number, default: 0 }, // Used for auto-assignment logic
   points: { type: Number, default: 0 }, // Gamification points
   badges: [{ type: String }],
+  isActive: { type: Boolean, default: false }, // Volunteer active status
+  score: { type: Number, default: 0 }, // Used for auto-assignment scoring
   history: [{
     taskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task' },
    status: { type: String, enum: ['Pending Approval', 'Assigned', 'Assigned (Primary Lead)', 'Waitlisted', 'Completed'] },

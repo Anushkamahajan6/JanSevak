@@ -1,6 +1,8 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const http = require('http');
+const socketIO = require('socket.io');
 
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
@@ -10,11 +12,29 @@ const heatmapRoutes = require('./routes/heatmap');
 const issueRoutes = require('./routes/issueRoutes');
 const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes'); // ✅ NEW
+const { initSocket } = require('./Sockets/VolunteerSocket');
 
 dotenv.config();
 connectDB();
 
 const app = express();
+const server = http.createServer(app);
+const io = socketIO(server, {
+  cors: {
+    origin: ["http://localhost:5173", "http://localhost:5174"],
+    credentials: true
+  }
+});
+
+// Initialize Socket.io handlers
+initSocket(io);
+
+// Make io available to routes via middleware
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
 const PORT = process.env.PORT || 5000;
 
 app.use(express.urlencoded({ extended: false }));
@@ -32,6 +52,6 @@ app.use('/api/issues', issueRoutes);
 app.use('/api/admin', adminRoutes); // ✅ NEW
 app.use('/api', heatmapRoutes);
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`JanSawak Server running on port ${PORT}`);
 });

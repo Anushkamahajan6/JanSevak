@@ -140,7 +140,7 @@ router.get('/', async (req, res) => {
 /**
  * 6. POST /api/issues
  * Create a new issue
- * ✅ NEW: For testing and actual issue creation
+ * Triggers volunteer notifications if active volunteers exist
  */
 router.post('/', verifyToken, async (req, res) => {
   try {
@@ -166,15 +166,38 @@ router.post('/', verifyToken, async (req, res) => {
       title: title || category,
       description: description || '',
       upvotes: 0,
-      upvotedBy: []
+      upvotedBy: [],
+      requestedVolunteers: []
     });
 
     await newIssue.save();
 
+    // Check for active volunteers to trigger notifications
+    const Volunteer = require('../models/volunteerModel');
+    const activeVolunteers = await Volunteer.find({ isActive: true }).select('_id name');
+    
+    if (activeVolunteers.length > 0 && req.io) {
+      // Emit notification to all connected volunteers
+      // In production, you'd track which volunteers are connected via Socket.io rooms
+      req.io.emit('new_issue_created', {
+        issueId: newIssue._id,
+        category: newIssue.category,
+        severity: newIssue.severity,
+        description: newIssue.description,
+        location: newIssue.location,
+        title: newIssue.title,
+        createdAt: newIssue.createdAt,
+        urgency: newIssue.severity >= 4 ? 'HIGH' : 'MEDIUM'
+      });
+      
+      console.log(`🔔 📢 Notified ${activeVolunteers.length} active volunteers about new issue ${newIssue._id}`);
+    }
+
     res.status(201).json({
       success: true,
       issue: newIssue,
-      message: 'Issue created successfully'
+      message: 'Issue created successfully',
+      volunteerCount: activeVolunteers.length
     });
   } catch (err) {
     console.error('Error creating issue:', err);

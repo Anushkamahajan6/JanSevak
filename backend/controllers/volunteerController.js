@@ -190,4 +190,87 @@ const submitProof = async (req, res) => {
   }
 };
 
-module.exports = { createProfile, getNearbyTasks, applyForTask, requestMoreVolunteers, submitProof };
+// 6. AUTO-ASSIGNMENT TIMERS (per issue)
+const issueAutoAssignTimers = {};
+
+// 7. Volunteer responds to issue notification
+const respondToIssue = async (req, res) => {
+  try {
+    const { volunteerId, issueId } = req.body;
+
+    const volunteer = await Volunteer.findById(volunteerId);
+    if (!volunteer) return res.status(404).json({ error: "Volunteer not found" });
+
+    const issue = await Issue.findById(issueId);
+    if (!issue) return res.status(404).json({ error: "Issue not found" });
+
+    // Check if already responded
+    const alreadyResponded = issue.requestedVolunteers.some(
+      rv => rv.volunteerId.toString() === volunteerId
+    );
+    if (alreadyResponded) {
+      return res.status(400).json({ error: "Already expressed interest in this issue" });
+    }
+
+    // Add volunteer to requestedVolunteers
+    issue.requestedVolunteers.push({
+      volunteerId: volunteer._id,
+      respondedAt: new Date()
+    });
+    await issue.save();
+
+    // Start 15-second auto-assignment timer (only once per issue)
+    if (!issueAutoAssignTimers[issueId]) {
+      issueAutoAssignTimers[issueId] = setTimeout(async () => {
+        await autoAssignVolunteer(issueId);
+      }, 15000);
+    }
+
+    res.status(200).json({ 
+      message: "Interest noted! Waiting for admin approval or auto-assignment in ~15 seconds.",
+      issueId 
+    });
+  } catch (error) {
+    console.error("Respond to issue error:", error);
+    res.status(500).json({ error: "Failed to respond" });
+  }
+};
+
+// 8. Auto-assign volunteer after 15 seconds (if admin hasn't approved)
+const autoAssignVolunteer = async (issueId) => {
+  try {
+    const issue = await Issue.findById(issueId);
+    if (!issue) return;
+
+    // If already assigned, skip
+    if (issue.assignedTo) return;
+
+    // Get unapproved volunteers
+    const unapproved = issue.requestedVolunteers.filter(rv => rv.approved !== true);
+    if (unapproved.length === 0) return;
+
+    // Find active volunteers from the unapproved list
+    const volunteerIds = unapproved.map(rv => rv.volunteerId);
+    const volunteers = await Volunteer.find({
+      _id: { $in: volunteerIds },
+      isActive: true
+    }).sort({ score: -1 });
+
+    if (volunteers.length > 0) {
+      // Assign to highest-scoring volunteer
+      const selected = volunteers[0];
+      issue.assignedTo = selected._id;
+      issue.status = 'in-progress';
+      await issue.save();
+
+      console.log(`Auto-assigned issue ${issueId} to volunteer ${selected.name}`);
+    }
+
+    // Clean up timer
+    delete issueAutoAssignTimers[issueId];
+  } catch (error) {
+    console.error("Auto-assign volunteer error:", error);
+  }
+};
+
+module.exports = { createProfile, getNearbyTasks, applyForTask, requestMoreVolunteers, submitProof, respondToIssue };

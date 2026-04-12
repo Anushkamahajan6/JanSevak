@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import HeatmapView from "../components/HeatmapView";
+import { updateVolunteerStatus } from "../api/volunteerApi";
+import { useIssueNotifications, playNotificationSound } from "../hooks/useIssueNotifications";
 
 export default function VolunteerPage() {
   const [tasks, setTasks] = useState([]);
@@ -8,6 +10,8 @@ export default function VolunteerPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isActive, setIsActive] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [notification, setNotification] = useState(null);
+  const [notificationTimeout, setNotificationTimeout] = useState(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -16,6 +20,23 @@ export default function VolunteerPage() {
   });
 
   const hasMapboxToken = Boolean(import.meta.env.VITE_MAPBOX_TOKEN);
+
+  // Initialize Socket.io notification listener
+  const handleNewIssue = (issueData) => {
+    setNotification({
+      type: 'issue',
+      title: issueData.title || issueData.category,
+      message: `${issueData.urgency === 'HIGH' ? '🚨 HIGH PRIORITY' : '📍'} New ${issueData.category} issue reported`,
+      data: issueData
+    });
+
+    // Auto-clear after 8 seconds
+    if (notificationTimeout) clearTimeout(notificationTimeout);
+    const timeout = setTimeout(() => setNotification(null), 8000);
+    setNotificationTimeout(timeout);
+  };
+
+  useIssueNotifications(isActive ? handleNewIssue : null);
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -85,26 +106,12 @@ export default function VolunteerPage() {
 
   const toggleVolunteerStatus = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/volunteer/status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          volunteerId: currentUser?._id,
-          isActive: !isActive,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setIsActive(!isActive);
-        alert(data.message || "Status updated");
-      } else {
-        alert(data.error || "Failed to update status");
-      }
+      const data = await updateVolunteerStatus(currentUser?._id, !isActive);
+      setIsActive(!isActive);
+      alert(data.message || "Status updated");
     } catch (err) {
       console.error(err);
-      alert("Server error");
+      alert(err.message || "Failed to update status");
     }
   };
 
@@ -112,10 +119,18 @@ export default function VolunteerPage() {
 
   if (loading) {
     return (
-      <div style={styles.loadingPage}>
+      <>
+        <style>{`
+          @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+        `}</style>
+        <div style={styles.loadingPage}>
         <div style={styles.loader}></div>
         <p style={{ marginTop: "16px", color: "#fff" }}>Loading...</p>
       </div>
+      </>
     );
   }
 
@@ -207,6 +222,36 @@ export default function VolunteerPage() {
   return (
     <div style={styles.bg}>
       <div style={styles.overlay}></div>
+
+      {/* Notification Toast */}
+      {notification && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          zIndex: 9999,
+          background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+          color: '#fff',
+          padding: '16px 24px',
+          borderRadius: '12px',
+          boxShadow: '0 10px 40px rgba(239, 68, 68, 0.4)',
+          animation: 'slideInRight 0.4s ease-out',
+          fontSize: '14px',
+          fontWeight: '600',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          maxWidth: '320px'
+        }}>
+          <div style={{ fontSize: '16px', fontWeight: '700' }}>{notification.title}</div>
+          <div style={{ fontSize: '13px', opacity: 0.9 }}>{notification.message}</div>
+          {notification.data?.severity && (
+            <div style={{ fontSize: '12px', opacity: 0.8 }}>
+              Severity: {'⭐'.repeat(notification.data.severity)}
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={styles.dashboard}>
         {/* Sidebar */}

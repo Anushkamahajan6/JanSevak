@@ -92,8 +92,8 @@ router.get('/volunteers', async (req, res) => {
 router.get('/issue/:issueId/volunteers', verifyAdmin, async (req, res) => {
   try {
     const issue = await Issue.findById(req.params.issueId)
-      .populate('interestedVolunteers', 'name type ngoName skills rating points badges')
-      .populate('assignedVolunteer', 'name type skills rating');
+      .populate('requestedVolunteers.volunteerId', 'name type ngoName skills rating points score')
+      .populate('assignedTo', 'name type skills rating');
 
     if (!issue) return res.status(404).json({ error: 'Issue not found' });
 
@@ -106,9 +106,9 @@ router.get('/issue/:issueId/volunteers', verifyAdmin, async (req, res) => {
         location: issue.location,
         title: issue.title,
         description: issue.description,
-        assignedVolunteer: issue.assignedVolunteer,
+        assignedTo: issue.assignedTo,
       },
-      interestedVolunteers: issue.interestedVolunteers,
+      requestedVolunteers: issue.requestedVolunteers,
     });
   } catch (err) {
     console.error('Fetch volunteers error:', err);
@@ -116,7 +116,57 @@ router.get('/issue/:issueId/volunteers', verifyAdmin, async (req, res) => {
   }
 });
 
+// ── POST /api/admin/approve ──────────────────────────────────────────────────
+// Approve a volunteer for an issue
+// Body: { volunteerId, issueId, approved: true/false }
+router.post('/approve', async (req, res) => {
+  try {
+    const { volunteerId, issueId, approved } = req.body;
+
+    if (!volunteerId || !issueId) {
+      return res.status(400).json({ error: 'volunteerId and issueId are required' });
+    }
+
+    const issue = await Issue.findById(issueId);
+    if (!issue) return res.status(404).json({ error: 'Issue not found' });
+
+    const volunteer = await Volunteer.findById(volunteerId);
+    if (!volunteer) return res.status(404).json({ error: 'Volunteer not found' });
+
+    // Mark volunteer in requestedVolunteers as approved/rejected
+    const requestEntry = issue.requestedVolunteers.find(
+      rv => rv.volunteerId.toString() === volunteerId
+    );
+
+    if (!requestEntry) {
+      return res.status(404).json({ error: 'Volunteer not in requested list' });
+    }
+
+    if (approved) {
+      // Assign the issue to this volunteer
+      issue.assignedTo = volunteerId;
+      issue.status = 'in-progress';
+      requestEntry.approved = true;
+    } else {
+      // Mark as rejected
+      requestEntry.approved = false;
+    }
+
+    await issue.save();
+
+    res.json({
+      message: approved ? `Volunteer "${volunteer.name}" assigned.` : `Volunteer "${volunteer.name}" rejected.`,
+      issueStatus: issue.status,
+      assignedTo: issue.assignedTo
+    });
+  } catch (err) {
+    console.error('Approve volunteer error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ── POST /api/admin/issue/:issueId/approve/:volunteerId ──────────────────────
+// Legacy endpoint - kept for compatibility
 router.post('/issue/:issueId/approve/:volunteerId', verifyAdmin, async (req, res) => {
   try {
     const { issueId, volunteerId } = req.params;
@@ -127,12 +177,17 @@ router.post('/issue/:issueId/approve/:volunteerId', verifyAdmin, async (req, res
     const volunteer = await Volunteer.findById(volunteerId);
     if (!volunteer) return res.status(404).json({ error: 'Volunteer not found' });
 
-    issue.assignedVolunteer = volunteerId;
+    // Update requestedVolunteers if volunteer is in the list
+    const requestEntry = issue.requestedVolunteers.find(
+      rv => rv.volunteerId.toString() === volunteerId
+    );
+    if (requestEntry) {
+      requestEntry.approved = true;
+    }
+
+    issue.assignedTo = volunteerId;
     issue.status = 'in-progress';
     await issue.save();
-
-    volunteer.history.push({ taskId: issueId, status: 'Assigned' });
-    await volunteer.save();
 
     res.json({
       message: `Volunteer "${volunteer.name}" approved and assigned to issue.`,

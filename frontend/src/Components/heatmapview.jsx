@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { expressInterestInIssue } from '../api/volunteerApi';
 
 // Pass currentUser from VolunteerPage so we know the volunteerId
 const HeatmapView = ({ currentUser }) => {
@@ -29,28 +30,16 @@ const HeatmapView = ({ currentUser }) => {
 
     setSubmitting(true);
     try {
-      const res = await fetch('http://localhost:5000/api/volunteer/express-interest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          volunteerId: currentUser._id,
-          issueId: panel.id,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        if (res.status === 400 && data.error?.includes('Already')) {
-          setAlreadyInterested(true);
-          showToast('You already expressed interest in this issue.', 'info');
-        } else {
-          throw new Error(data.error || 'Failed');
-        }
-      } else {
-        setAlreadyInterested(true);
-        showToast('✅ Request sent! Admin will review and assign you.');
-      }
+      const data = await expressInterestInIssue(currentUser._id, panel.id);
+      setAlreadyInterested(true);
+      showToast('✅ Request sent! Admin will review and assign you.');
     } catch (err) {
-      showToast(err.message, 'error');
+      if (err.message?.includes('Already')) {
+        setAlreadyInterested(true);
+        showToast('You already expressed interest in this issue.', 'info');
+      } else {
+        showToast(err.message, 'error');
+      }
     } finally {
       setSubmitting(false);
     }
