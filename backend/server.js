@@ -24,10 +24,9 @@ const PORT = process.env.PORT || 5000;
 app.use(express.urlencoded({ extended: false })); // IMPORTANT for Twilio
 app.use(express.json());
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: ["http://localhost:5173", "http://localhost:5174"],
   credentials: true
 }));
-
 // Routes
 app.use('/twilio', twilioRoutes);
 app.use('/api/auth', authRoutes);

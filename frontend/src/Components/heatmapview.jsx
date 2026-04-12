@@ -45,7 +45,6 @@ const HeatmapView = () => {
       });
 
       map.current.on('load', () => {
-        // Check if source already exists
         if (!map.current.getSource('issues-data')) {
           map.current.addSource('issues-data', {
             type: 'geojson',
@@ -59,7 +58,7 @@ const HeatmapView = () => {
             id: 'issues-heat',
             type: 'heatmap',
             source: 'issues-data',
-            maxzoom: 15,
+            maxzoom: 12, // Zoom badhne par heatmap gayab ho jayegi
             paint: {
               'heatmap-weight': ['interpolate', ['linear'], ['get', 'weight'], 0, 0, 1, 1],
               'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 15, 3],
@@ -73,6 +72,35 @@ const HeatmapView = () => {
               ],
               'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 2, 15, 20],
               'heatmap-opacity': 0.8
+            }
+          });
+        }
+
+        if (!map.current.getLayer('issues-pins')) {
+          map.current.addLayer({
+            id: 'issues-pins',
+            type: 'circle',
+            source: 'issues-data',
+            minzoom: 8, // Kam zoom par bhi pins dikhenge
+            paint: {
+              // PIN COLOR BASED ON STATUS
+              'circle-color': [
+                'match',
+                ['get', 'status'],
+                'pending', '#EF4444',     // Red
+                'in-progress', '#FBBF24',  // Yellow
+                'resolved', '#10B981',    // Green
+                '#888888'                 // Default Gray if status missing
+              ],
+              // PIN SIZE
+              'circle-radius': [
+                'interpolate', ['linear'], ['zoom'],
+                10, 6,
+                15, 12
+              ],
+              // WHITE BORDER (McDonald's style)
+              'circle-stroke-width': 2,
+              'circle-stroke-color': '#ffffff'
             }
           });
         }
@@ -103,7 +131,7 @@ const HeatmapView = () => {
 
   return (
     <div className="relative w-full h-full rounded-2xl overflow-hidden border border-slate-700 shadow-2xl bg-slate-900">
-      
+
       {/* Error State */}
       {error && (
         <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-900/95 backdrop-blur-sm gap-4 p-6">
@@ -143,7 +171,7 @@ const HeatmapView = () => {
               Live Issue Hotspots
             </h3>
             <p className="text-slate-400 text-xs mt-1">Real-time density from MongoDB Atlas</p>
-            
+
             {/* Heatmap Legend */}
             <div className="mt-4 space-y-2">
               <div className="flex items-center justify-between text-[10px] text-slate-400 uppercase tracking-tighter">

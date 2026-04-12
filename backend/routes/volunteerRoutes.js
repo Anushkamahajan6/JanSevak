@@ -1,24 +1,44 @@
 const express = require('express');
+
+const Volunteer = require('../models/volunteerModel');
+
 const {
-    createProfile,
-    getNearbyTasks,
-    applyForTask,
-    submitProof
+  createProfile,
+  getNearbyTasks,
+  applyForTask,
+  submitProof
 } = require('../controllers/volunteerController');
 
 const router = express.Router();
 
-// Route: POST /api/volunteer/profile
 router.post('/profile', createProfile);
 
-// Route: GET /api/volunteer/tasks
 router.get('/tasks', getNearbyTasks);
 
-// Route: POST /api/volunteer/apply
 router.post('/apply', applyForTask);
 
-// Route: POST /api/volunteer/submit-proof
-// (Later, add a multer middleware here like: upload.fields([{name: 'before'}, {name: 'after'}]), submitProof)
+router.post('/status', async (req, res) => {
+  try {
+    const { volunteerId, isActive } = req.body;
+
+    const updatedVolunteer = await Volunteer.findByIdAndUpdate(
+      volunteerId,
+      { isActive },
+      { new: true }
+    );
+
+    res.json({
+      message: isActive
+        ? "You are now Active"
+        : "You are now Offline",
+      volunteer: updatedVolunteer
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 router.post('/submit-proof', submitProof);
 
 module.exports = router;
