@@ -11,6 +11,9 @@ export default function VolunteerPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [formData, setFormData] = useState({ name: '', type: 'Individual', ngoName: '' });
 
+  // Lead Feature State
+  const [additionalCount, setAdditionalCount] = useState(1);
+
   // 1. Fetch tasks on load
   useEffect(() => {
     const fetchTasks = async () => {
@@ -67,6 +70,28 @@ export default function VolunteerPage() {
     }
   };
 
+  // 4. Handle "I need more people" (Lead Feature)
+  const handleRequestMore = async (taskId) => {
+    if (!taskId) {
+        alert("Please enter a valid Task ID first!");
+        return;
+    }
+    try {
+      const response = await fetch('http://localhost:5000/api/volunteer/request-more', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId: taskId,
+          additionalCount: parseInt(additionalCount)
+        })
+      });
+      const data = await response.json();
+      alert(data.message || data.error);
+    } catch (error) {
+      console.error("Error requesting more people:", error);
+    }
+  };
+
   // --- UI: REGISTRATION SCREEN ---
   if (!isRegistered) {
     return (
@@ -112,6 +137,38 @@ export default function VolunteerPage() {
         </div>
         <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#166534', backgroundColor: '#dcfce7', padding: '10px 20px', borderRadius: '8px' }}>
           🏆 Points: {currentUser.points}
+        </div>
+      </div>
+
+      {/* --- NEW: LEAD CONTROL PANEL (For Hackathon Demo) --- */}
+      <div style={{ marginBottom: '30px', padding: '20px', backgroundColor: '#fffbeb', borderRadius: '12px', border: '1px solid #fde68a' }}>
+        <h3 style={{ margin: '0 0 10px 0', color: '#b45309', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          👑 Lead Control Panel
+        </h3>
+        <p style={{ margin: '0 0 15px 0', fontSize: '14px', color: '#92400e' }}>
+          If you were assigned as the Primary Lead for a task, you can request backup from the waitlist here:
+        </p>
+        
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <input 
+            type="text" 
+            placeholder="Paste Task ID here..." 
+            id="demoTaskId"
+            style={{ padding: '10px', borderRadius: '6px', border: '1px solid #d97706', flex: 1 }}
+          />
+          <input 
+            type="number" 
+            min="1" max="10" 
+            value={additionalCount}
+            onChange={(e) => setAdditionalCount(e.target.value)}
+            style={{ padding: '10px', width: '80px', borderRadius: '6px', border: '1px solid #d97706' }}
+          />
+          <button 
+            onClick={() => handleRequestMore(document.getElementById('demoTaskId').value)}
+            style={{ backgroundColor: '#f59e0b', color: 'white', padding: '10px 20px', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
+          >
+            Request Backup
+          </button>
         </div>
       </div>
 
