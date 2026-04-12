@@ -6,6 +6,7 @@ export default function VolunteerPage() {
   const [loading, setLoading] = useState(true);
   const [isRegistered, setIsRegistered] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+   const [isActive, setIsActive] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -30,52 +31,81 @@ export default function VolunteerPage() {
   }, []);
 
   const handleRegister = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    try {
-      const res = await fetch(
-        "http://localhost:5000/api/volunteer/profile",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
-        }
-      );
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setCurrentUser(data.volunteer);
-        setIsRegistered(true);
-      } else {
-        alert(data.error);
+  try {
+    const res = await fetch(
+      "http://localhost:5000/api/volunteer/profile",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
       }
-    } catch (err) {
-      console.error(err);
-      alert("Server error");
-    }
-  };
+    );
 
-  const handleApply = async (taskId) => {
-    try {
-      const res = await fetch(
-        "http://localhost:5000/api/volunteer/apply",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            volunteerId: currentUser._id,
-            taskId,
-          }),
-        }
-      );
+    const data = await res.json();
 
-      const data = await res.json();
-      alert(data.message);
-    } catch (err) {
-      console.error(err);
+    if (res.ok) {
+      setCurrentUser(data.volunteer);
+      setIsRegistered(true);
+    } else {
+      alert(data.error);
     }
-  };
+  } catch (err) {
+    console.error(err);
+    alert("Server error");
+  }
+};
+
+const handleApply = async (taskId) => {
+  try {
+    const res = await fetch(
+      "http://localhost:5000/api/volunteer/apply",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          volunteerId: currentUser._id,
+          taskId,
+        }),
+      }
+    );
+
+    const data = await res.json();
+    alert(data.message);
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+const toggleVolunteerStatus = async () => {
+  try {
+    const res = await fetch(
+      "http://localhost:5000/api/volunteer/status",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          volunteerId: currentUser?._id,
+          isActive: !isActive,
+        }),
+      }
+    );
+
+    const data = await res.json();
+
+    if (res.ok) {
+      setIsActive(!isActive);
+      alert(data.message || "Status updated");
+    } else {
+      alert(data.error || "Failed");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Server error");
+  }
+  
+};
 
   /* ---------------- LOADING ---------------- */
 
@@ -226,9 +256,22 @@ export default function VolunteerPage() {
               </p>
             </div>
 
-            <div style={styles.pointsBox}>
-              🏆 {currentUser.points} Points
-            </div>
+            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+  <button
+    onClick={toggleVolunteerStatus}
+    style={
+      isActive
+        ? styles.activeStatusBtn
+        : styles.inactiveStatusBtn
+    }
+  >
+    {isActive ? "🟢 Active Now" : "🔴 Go Active"}
+  </button>
+
+  <div style={styles.pointsBadge}>
+    🏆 {currentUser?.points || 0} Points
+  </div>
+</div>
           </div>
 
           {/* Stats */}
@@ -609,4 +652,25 @@ const styles = {
     cursor: "pointer",
     fontWeight: "700",
   },
+
+  activeStatusBtn: {
+  border: "none",
+  padding: "10px 14px",
+  borderRadius: "10px",
+  background: "linear-gradient(135deg,#22c55e,#16a34a)",
+  color: "#fff",
+  fontWeight: "700",
+  cursor: "pointer",
+},
+
+inactiveStatusBtn: {
+  border: "none",
+  padding: "10px 14px",
+  borderRadius: "10px",
+  background: "linear-gradient(135deg,#ef4444,#dc2626)",
+  color: "#fff",
+  fontWeight: "700",
+  cursor: "pointer",
+},
+
 };
