@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from "react-router-dom";
-import HeatmapView from '../../Components/heatmapview';
+import HeatmapView from '../../components/HeatmapView';
 
 export default function AdminPage() {
 
