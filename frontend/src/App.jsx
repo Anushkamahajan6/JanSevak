@@ -19,22 +19,18 @@ import Profile from "./pages/user-dashboard/Profile";
 import Rewards from "./pages/user-dashboard/Rewards";
 import UserSettings from "./pages/user-dashboard/Settings";
 
-// Heatmaps (both versions kept)
-import HeatmapView from "./components/HeatmapView";
-import Heatmapview from "./Components/heatmapview"; // renamed to avoid conflict
+// Heatmap
+import Heatmapview from "./Components/heatmapview";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public */}
         <Route path="/" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
 
-        {/* Volunteer */}
         <Route path="/volunteer" element={<VolunteerPage />} />
 
-        {/* User */}
         <Route path="/user" element={<Dashboard />} />
         <Route path="/user/issues" element={<MyIssues />} />
         <Route path="/user/my-issues" element={<MyIssues />} />
@@ -44,15 +40,13 @@ function App() {
         <Route path="/user/settings" element={<UserSettings />} />
         <Route path="/user/heatmap" element={<Heatmapview />} />
 
-        {/* Admin */}
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/admin/volunteers" element={<AdminVolunteersPage />} />
         <Route path="/admin/issues" element={<IssuesPage />} />
         <Route path="/admin/settings" element={<AdminSettings />} />
         <Route path="/admin/heatmap" element={<AdminHeatmap />} />
 
-        {/* Extra */}
-        <Route path="/heatmapView" element={<HeatmapView />} />
+        <Route path="/heatmapView" element={<Heatmapview />} />
       </Routes>
     </BrowserRouter>
   );
