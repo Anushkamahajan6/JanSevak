@@ -7,6 +7,9 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const volunteerRoutes = require('./routes/volunteerRoutes');
 const twilioRoutes = require('./routes/twilioRoutes');
+const heatmapRoutes = require('./routes/heatmap');
+const issueRoutes = require('./routes/issueRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 // Initialize environment variables
 dotenv.config();
@@ -28,9 +31,10 @@ app.use(cors({
 // Routes
 app.use('/twilio', twilioRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/user', userRoutes);
 app.use('/api/volunteer', volunteerRoutes);
-// app.use('/api/admin', adminRoutes);
-// app.use('/api/user', userRoutes);
+app.use('/api/issues', issueRoutes);
+app.use('/api/heatmap', heatmapRoutes);
 
 // Start the server
 app.listen(PORT, () => {

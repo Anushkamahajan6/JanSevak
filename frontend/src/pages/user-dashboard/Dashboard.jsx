@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Bell,
   LayoutDashboard,
@@ -8,85 +8,191 @@ import {
   User,
   Settings,
   Plus,
+  ThumbsUp,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useUser } from "../../context/userContext";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-const [showNotifications, setShowNotifications] = useState(false);
+  const { user } = useUser();
 
-const [notifications, setNotifications] = useState([
-  { id: 1, text: "Your garbage issue was resolved ✅", read: false },
-  { id: 2, text: "New reward unlocked 🎁", read: false },
-  { id: 3, text: "Volunteer assigned to your report 👷", read: true },
-]);
-  const [userName, setUserName] = useState("Arjun");
+  // ============= STATES =============
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([
+    { id: 1, text: "Your garbage issue was resolved ✅", read: false },
+    { id: 2, text: "New reward unlocked 🎁", read: false },
+    { id: 3, text: "Volunteer assigned to your report 👷", read: true },
+  ]);
+
+  const [userName, setUserName] = useState("User");
   const [editingName, setEditingName] = useState(false);
   const [newQuery, setNewQuery] = useState("");
 
-  const stats = [
-    {
-      title: "Issues Filed",
-      value: "12",
-      sub: "+2 this week",
-      color: "bg-indigo-50 text-indigo-600",
-    },
-    {
-      title: "Resolved",
-      value: "7",
-      sub: "+1 resolved",
-      color: "bg-green-50 text-green-600",
-    },
-    {
-      title: "Pending",
-      value: "3",
-      sub: "In Progress",
-      color: "bg-yellow-50 text-yellow-600",
-    },
-    {
-      title: "Total Points",
-      value: "340",
-      sub: "+50 earned",
-      color: "bg-purple-50 text-purple-600",
-    },
-  ];
+  // ============= API DATA STATES =============
+  const [stats, setStats] = useState([
+    { title: "Issues Filed", value: "0", sub: "+0 this week", color: "bg-indigo-50 text-indigo-600" },
+    { title: "Resolved", value: "0", sub: "+0 resolved", color: "bg-green-50 text-green-600" },
+    { title: "Pending", value: "0", sub: "In Progress", color: "bg-yellow-50 text-yellow-600" },
+    { title: "Total Points", value: "0", sub: "+0 earned", color: "bg-purple-50 text-purple-600" },
+  ]);
 
-  const issues = [
-    {
-      title: "Broken street light — Block C",
-      meta: "Infrastructure • Filed 3 days ago",
-      status: "In Progress",
-      pts: "+50",
-      emoji: "💡",
-      bg: "bg-yellow-50",
-    },
-    {
-      title: "Garbage overflow near Canteen",
-      meta: "Sanitation • Filed 1 week ago",
-      status: "Resolved",
-      pts: "+100",
-      emoji: "🗑️",
-      bg: "bg-green-50",
-    },
-    {
-      title: "Pothole on Main Road entrance",
-      meta: "Roads • Filed 2 days ago",
-      status: "Pending",
-      pts: "+50",
-      emoji: "🚧",
-      bg: "bg-blue-50",
-    },
-    {
-      title: "Water leakage in Hostel Block B",
-      meta: "Utilities • Filed today",
-      status: "Pending",
-      pts: "+50",
-      emoji: "💧",
-      bg: "bg-red-50",
-    },
-  ];
+  const [issues, setIssues] = useState([]);
+  const [queries, setQueries] = useState([]);
+  const [categories, setCategories] = useState([
+    ["Infrastructure", 0],
+    ["Sanitation", 0],
+    ["Roads", 0],
+    ["Utilities", 0],
+  ]);
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [upvoteLoading, setUpvoteLoading] = useState({});
+
+  // ============= CATEGORY MAPPING =============
+  const categoryEmojis = {
+    Infrastructure: "💡",
+    Sanitation: "🗑️",
+    Roads: "🚧",
+    Utilities: "💧",
+    "Animal Welfare": "🐾",
+    "Health & Hygiene": "🏥",
+    "Parks & Recreation": "🎉",
+    default: "⚠️",
+  };
+
+  const categoryColors = {
+    Infrastructure: "bg-yellow-50",
+    Sanitation: "bg-green-50",
+    Roads: "bg-blue-50",
+    Utilities: "bg-red-50",
+    default: "bg-slate-50",
+  };
+
+  // ============= FETCH STATS =============
+  const fetchStats = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/api/issues/stats", {
+        credentials: "include",
+      });
+      const data = await response.json();
+
+      setStats([
+        {
+          title: "Issues Filed",
+          value: data.total || "0",
+          sub: "+0 this week",
+          color: "bg-indigo-50 text-indigo-600",
+        },
+        {
+          title: "Resolved",
+          value: data.resolved || "0",
+          sub: `+${data.resolved || 0} resolved`,
+          color: "bg-green-50 text-green-600",
+        },
+        {
+          title: "Pending",
+          value: (data.pending || 0) + (data.inProgress || 0),
+          sub: "In Progress",
+          color: "bg-yellow-50 text-yellow-600",
+        },
+        {
+          title: "Total Points",
+          value: (data.total || 0) * 50,
+          sub: `+${(data.total || 0) * 50} earned`,
+          color: "bg-purple-50 text-purple-600",
+        },
+      ]);
+    } catch (err) {
+      console.error("Error fetching stats:", err);
+      setError("Failed to fetch stats");
+    }
+  };
+
+  // ============= FETCH USER ISSUES =============
+  const fetchUserIssues = async () => {
+    if (!user?.id) return;
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/issues/user/${user.id}`, {
+        credentials: "include",
+      });
+      const data = await response.json();
+
+      // Transform API response to UI format
+      const issuesData = (data.issues || []).map((issue) => ({
+        id: issue._id,
+        title: `${issue.category} — ${issue.location?.address || "Unknown Location"}`,
+        meta: `${issue.category} • Filed ${new Date(issue.createdAt).toLocaleDateString()}`,
+        status: issue.status.charAt(0).toUpperCase() + issue.status.slice(1),
+        pts: `+${issue.severity * 50}`,
+        emoji: categoryEmojis[issue.category] || categoryEmojis.default,
+        bg: categoryColors[issue.category] || categoryColors.default,
+        upvotes: issue.upvotes || 0,
+        severity: issue.severity,
+      }));
+
+      setIssues(issuesData);
+      setQueries(issuesData.map((issue) => issue.title)); // Use issue titles as recent queries
+
+      // Calculate categories
+      const categoryCounts = {};
+      issuesData.forEach((issue) => {
+        const cat = issue.meta.split(" •")[0];
+        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+      });
+
+      setCategories([
+        ["Infrastructure", categoryCounts["Infrastructure"] || 0],
+        ["Sanitation", categoryCounts["Sanitation"] || 0],
+        ["Roads", categoryCounts["Roads"] || 0],
+        ["Utilities", categoryCounts["Utilities"] || 0],
+      ]);
+    } catch (err) {
+      console.error("Error fetching issues:", err);
+      setError("Failed to fetch issues");
+    }
+  };
+
+  // ============= HANDLE UPVOTE =============
+  const handleUpvote = async (issueId, index) => {
+    try {
+      setUpvoteLoading((prev) => ({ ...prev, [issueId]: true }));
+
+      const response = await fetch(`http://localhost:5000/api/issues/${issueId}/upvote`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const updatedIssues = [...issues];
+        updatedIssues[index].upvotes += 1;
+        setIssues(updatedIssues);
+      }
+    } catch (err) {
+      console.error("Error upvoting:", err);
+    } finally {
+      setUpvoteLoading((prev) => ({ ...prev, [issueId]: false }));
+    }
+  };
+
+  // ============= LOAD DATA ON MOUNT =============
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([fetchStats(), fetchUserIssues()]);
+      setLoading(false);
+    };
+
+    loadData();
+  }, [user?.id]);
+
+  // ============= NAVIGATION & HELPERS =============
   const nav = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/user" },
     { name: "My Issues", icon: Clock3, path: "/user/my-issues" },
@@ -95,12 +201,6 @@ const [notifications, setNotifications] = useState([
     { name: "Profile", icon: User, path: "/user/profile" },
     { name: "Settings", icon: Settings, path: "/user/settings" },
   ];
-
-  const [queries, setQueries] = useState([
-    "Garbage overflow near canteen",
-    "Broken street light in Block C",
-    "Water leakage in Hostel B",
-  ]);
 
   const getStatus = (status) => {
     if (status === "Resolved") return "bg-green-100 text-green-700";
@@ -298,37 +398,52 @@ const [notifications, setNotifications] = useState([
               </div>
 
               <div className="space-y-3">
-                {issues.map((item, i) => (
-                  <div
-                    key={i}
-                    className="border border-slate-200 rounded-xl p-4 flex items-center gap-3 hover:bg-slate-50 transition"
-                  >
+                {loading ? (
+                  <div className="text-center py-8 text-slate-500">Loading issues...</div>
+                ) : issues.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500">No issues filed yet. <button onClick={() => navigate("/user/report")} className="text-indigo-600 font-semibold">File one now</button></div>
+                ) : (
+                  issues.slice(0, 4).map((item, i) => (
                     <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${item.bg}`}
+                      key={i}
+                      className="border border-slate-200 rounded-xl p-4 flex items-center gap-3 hover:bg-slate-50 transition"
                     >
-                      {item.emoji}
+                      <div
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${item.bg}`}
+                      >
+                        {item.emoji}
+                      </div>
+
+                      <div className="flex-1">
+                        <p className="font-medium text-sm text-slate-800">
+                          {item.title}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">{item.meta}</p>
+                      </div>
+
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${getStatus(
+                          item.status
+                        )}`}
+                      >
+                        {item.status}
+                      </span>
+
+                      <span className="text-xs font-semibold bg-purple-100 text-purple-700 px-2 py-1 rounded-lg">
+                        {item.pts}
+                      </span>
+
+                      <button
+                        onClick={() => handleUpvote(item.id, issues.indexOf(item))}
+                        disabled={upvoteLoading[item.id]}
+                        className="ml-2 flex items-center gap-1 px-3 py-1 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs font-medium transition disabled:opacity-50"
+                      >
+                        <ThumbsUp size={14} />
+                        {item.upvotes}
+                      </button>
                     </div>
-
-                    <div className="flex-1">
-                      <p className="font-medium text-sm text-slate-800">
-                        {item.title}
-                      </p>
-                      <p className="text-xs text-slate-500 mt-1">{item.meta}</p>
-                    </div>
-
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${getStatus(
-                        item.status
-                      )}`}
-                    >
-                      {item.status}
-                    </span>
-
-                    <span className="text-xs font-semibold bg-purple-100 text-purple-700 px-2 py-1 rounded-lg">
-                      {item.pts}
-                    </span>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
@@ -397,38 +512,39 @@ const [notifications, setNotifications] = useState([
           <div className="bg-white rounded-2xl p-5 border border-slate-200 hover:shadow-xl transition duration-300">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-semibold text-slate-800">
-                Previous Queries
+                Your Recent Issues
               </h3>
             </div>
 
             <div className="space-y-3">
-              {queries.map((item, i) => (
-                <div
-                  key={i}
-                  className="p-3 rounded-xl bg-slate-50 border border-slate-100"
-                >
-                  {item}
-                </div>
-              ))}
+              {loading ? (
+                <div className="text-center py-8 text-slate-500">Loading...</div>
+              ) : queries.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">No issues yet</div>
+              ) : (
+                queries.map((item, i) => (
+                  <div
+                    key={i}
+                    className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-sm text-slate-700 truncate hover:bg-slate-100 transition"
+                  >
+                    {item}
+                  </div>
+                ))
+              )}
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex gap-2 pt-2 border-t">
                 <input
                   value={newQuery}
                   onChange={(e) => setNewQuery(e.target.value)}
-                  placeholder="Add new query"
-                  className="flex-1 border rounded-xl px-3 py-2"
+                  placeholder="Search recent issues..."
+                  className="flex-1 border rounded-xl px-3 py-2 text-sm"
                 />
 
                 <button
-                  onClick={() => {
-                    if (newQuery.trim()) {
-                      setQueries([...queries, newQuery]);
-                      setNewQuery("");
-                    }
-                  }}
-                  className="bg-indigo-600 text-white px-4 rounded-xl"
+                  disabled={!newQuery.trim()}
+                  className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-4 rounded-xl text-sm font-medium transition"
                 >
-                  Add
+                  Search
                 </button>
               </div>
             </div>
