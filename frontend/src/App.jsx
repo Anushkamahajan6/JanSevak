@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import AdminLayout from "./layouts/AdminLayout";
 
 import Login from "./pages/LoginPage";
 import Signup from "./pages/SignupPage";
@@ -39,11 +40,14 @@ function App() {
         <Route path="/user/settings" element={<UserSettings />} />
         <Route path="/user/heatmap" element={<Heatmapview />} />
 
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/admin/volunteers" element={<AdminVolunteersPage />} />
-        <Route path="/admin/issues" element={<IssuesPage />} />
-        <Route path="/admin/settings" element={<AdminSettings />} />
-        <Route path="/admin/heatmap" element={<AdminHeatmap />} />
+        // REPLACE your flat admin routes with this nested structure:
+<Route path="/admin" element={<AdminLayout />}>
+  <Route index element={<AdminPage />} />
+  <Route path="issues" element={<IssuesPage />} />
+  <Route path="volunteers" element={<AdminVolunteersPage />} />
+  <Route path="settings" element={<AdminSettings />} />
+  <Route path="heatmap" element={<AdminHeatmap />} />
+</Route>
 
         <Route path="/heatmapView" element={<Heatmapview />} />
       </Routes>
