@@ -9,6 +9,8 @@ import {
 
 export default function ReportIssue() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const [form, setForm] = useState({
     title: "",
@@ -32,6 +34,7 @@ export default function ReportIssue() {
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setError("");
   };
 
   const handleImage = (e) => {
@@ -48,13 +51,99 @@ export default function ReportIssue() {
         ...form,
         location: `${lat}, ${lng}`,
       });
+    }, (err) => {
+      setError("Unable to get your location. Please enter it manually.");
     });
   };
 
-  const handleSubmit = (e) => {
+  const parseLocation = (locationStr) => {
+    if (!locationStr) return null;
+    
+    const parts = locationStr.split(',').map(p => p.trim());
+    if (parts.length === 2) {
+      const lat = parseFloat(parts[0]);
+      const lng = parseFloat(parts[1]);
+      
+      if (!isNaN(lat) && !isNaN(lng)) {
+        return {
+          type: 'Point',
+          coordinates: [lng, lat],
+          address: locationStr
+        };
+      }
+    }
+    
+    return null;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert("Issue Submitted Successfully ✅");
-    navigate("/user");
+    setError("");
+
+    // Validation
+    if (!form.title.trim()) {
+      setError("Please enter an issue title");
+      return;
+    }
+
+    if (!form.category) {
+      setError("Please select a category");
+      return;
+    }
+
+    if (!form.description.trim()) {
+      setError("Please enter a description");
+      return;
+    }
+
+    if (!form.location.trim()) {
+      setError("Please provide a location");
+      return;
+    }
+
+    const location = parseLocation(form.location);
+    if (!location) {
+      setError("Invalid location format. Please use: latitude, longitude");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE_URL;
+      const payload = {
+        title: form.title,
+        category: form.category,
+        description: form.description,
+        location: location,
+        severity: 3,
+        status: 'pending'
+      };
+
+      const res = await fetch(`${apiBase}/api/issues`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Failed to submit issue');
+        return;
+      }
+
+      alert("Issue Submitted Successfully ✅");
+      navigate("/user/my-issues");
+    } catch (err) {
+      console.error('Error submitting issue:', err);
+      setError(err.message || 'Server error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -73,6 +162,12 @@ export default function ReportIssue() {
           <p className="text-slate-300 mt-2">
             Help improve your community by reporting civic issues.
           </p>
+
+          {error && (
+            <div className="mt-4 bg-red-500/20 border border-red-500/30 rounded-xl p-3 text-red-200 text-sm">
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             {/* Title */}
@@ -192,12 +287,13 @@ export default function ReportIssue() {
             {/* Submit */}
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-violet-500 to-indigo-500 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition hover:scale-[1.02]"
+              disabled={loading}
+              className={`w-full bg-gradient-to-r from-violet-500 to-indigo-500 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition hover:scale-[1.02] ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <Send size={18} />
-              Submit Issue
+              {loading ? 'Submitting...' : 'Submit Issue'}
             </button>
-          </form>
+                 </form>
         </div>
       </div>
     </div>

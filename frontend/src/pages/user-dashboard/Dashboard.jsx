@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Bell,
   LayoutDashboard,
@@ -15,6 +15,13 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState({
+    totalIssues: 0,
+    resolved: 0,
+    pending: 0,
+  });
+  const [userIssues, setUserIssues] = useState([]);
 
   const [notifications, setNotifications] = useState([
     { id: 1, text: "Your garbage issue was resolved ✅", read: false },
@@ -26,43 +33,53 @@ export default function Dashboard() {
   const [editingName, setEditingName] = useState(false);
   const [newQuery, setNewQuery] = useState("");
 
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      const apiBase = import.meta.env.VITE_API_BASE_URL;
+      try {
+        setLoading(true);
+        
+        // Fetch dashboard stats
+        const statsRes = await fetch(`${apiBase}/api/user/dashboard`, {
+          credentials: "include",
+        });
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          setDashboardStats(statsData);
+        }
+
+        // Fetch user's issues
+        const issuesRes = await fetch(`${apiBase}/api/issues`, {
+          credentials: "include",
+        });
+        if (issuesRes.ok) {
+          const issuesData = await issuesRes.json();
+          setUserIssues(issuesData.issues || []);
+        }
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
   const stats = [
-    { title: "Issues Filed", value: "12", sub: "+2 this week" },
-    { title: "Resolved", value: "7", sub: "+1 resolved" },
-    { title: "Pending", value: "3", sub: "In Progress" },
+    { title: "Issues Filed", value: dashboardStats.totalIssues.toString(), sub: "+2 this week" },
+    { title: "Resolved", value: dashboardStats.resolved.toString(), sub: "+1 resolved" },
+    { title: "Pending", value: dashboardStats.pending.toString(), sub: "In Progress" },
     { title: "Total Points", value: "340", sub: "+50 earned" },
   ];
 
-  const issues = [
-    {
-      title: "Broken street light — Block C",
-      meta: "Infrastructure • Filed 3 days ago",
-      status: "In Progress",
-      pts: "+50",
-      emoji: "💡",
-    },
-    {
-      title: "Garbage overflow near Canteen",
-      meta: "Sanitation • Filed 1 week ago",
-      status: "Resolved",
-      pts: "+100",
-      emoji: "🗑️",
-    },
-    {
-      title: "Pothole on Main Road entrance",
-      meta: "Roads • Filed 2 days ago",
-      status: "Pending",
-      pts: "+50",
-      emoji: "🚧",
-    },
-    {
-      title: "Water leakage in Hostel Block B",
-      meta: "Utilities • Filed today",
-      status: "Pending",
-      pts: "+50",
-      emoji: "💧",
-    },
-  ];
+  const displayIssues = userIssues.slice(0, 4).map(issue => ({
+    title: issue.title || issue.category,
+    meta: `${issue.category || 'Issue'} • Filed ${new Date(issue.createdAt).toLocaleDateString()}`,
+    status: issue.status ? issue.status.charAt(0).toUpperCase() + issue.status.slice(1) : 'Pending',
+    pts: "+50",
+    emoji: "📋",
+  }));
 
   const nav = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/user" },
@@ -80,9 +97,10 @@ export default function Dashboard() {
   ]);
 
   const badge = (status) => {
-    if (status === "Resolved")
+    const lowerStatus = status.toLowerCase();
+    if (lowerStatus === "resolved")
       return "bg-emerald-500/20 text-emerald-200";
-    if (status === "In Progress")
+    if (lowerStatus === "in-progress" || lowerStatus === "in progress")
       return "bg-sky-500/20 text-sky-200";
     return "bg-amber-500/20 text-amber-200";
   };
@@ -179,33 +197,37 @@ export default function Dashboard() {
             <div className="xl:col-span-2 bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl p-5">
               <div className="flex justify-between mb-4">
                 <h3 className="font-bold">Recent Issues</h3>
-                <button className="text-violet-200">See all →</button>
+                <button onClick={() => navigate("/user/my-issues")} className="text-violet-200">See all →</button>
               </div>
 
               <div className="space-y-3">
-                {issues.map((item, i) => (
-                  <div
-                    key={i}
-                    className="bg-white/10 border border-white/10 rounded-xl p-4 flex items-center gap-3"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                      {item.emoji}
+                {displayIssues.length > 0 ? (
+                  displayIssues.map((item, i) => (
+                    <div
+                      key={i}
+                      className="bg-white/10 border border-white/10 rounded-xl p-4 flex items-center gap-3"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                        {item.emoji}
+                      </div>
+
+                      <div className="flex-1">
+                        <p>{item.title}</p>
+                        <p className="text-sm text-slate-300">{item.meta}</p>
+                      </div>
+
+                      <span className={`px-3 py-1 rounded-full text-xs ${badge(item.status)}`}>
+                        {item.status}
+                      </span>
+
+                      <span className="px-2 py-1 bg-fuchsia-500/20 text-fuchsia-200 rounded-lg text-xs">
+                        {item.pts}
+                      </span>
                     </div>
-
-                    <div className="flex-1">
-                      <p>{item.title}</p>
-                      <p className="text-sm text-slate-300">{item.meta}</p>
-                    </div>
-
-                    <span className={`px-3 py-1 rounded-full text-xs ${badge(item.status)}`}>
-                      {item.status}
-                    </span>
-
-                    <span className="px-2 py-1 bg-fuchsia-500/20 text-fuchsia-200 rounded-lg text-xs">
-                      {item.pts}
-                    </span>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-slate-300 text-sm">No issues yet. Start by filing a new issue!</p>
+                )}
               </div>
             </div>
 
@@ -214,7 +236,7 @@ export default function Dashboard() {
               <div className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl p-5">
                 <div className="flex justify-between">
                   <h3 className="font-bold">Your Points</h3>
-                  <button className="text-violet-200">Rewards →</button>
+                  <button onClick={() => navigate("/user/rewards")} className="text-violet-200">Rewards →</button>
                 </div>
 
                 <div className="mt-4 bg-white/10 rounded-2xl p-6 text-center">

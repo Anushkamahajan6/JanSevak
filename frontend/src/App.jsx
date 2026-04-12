@@ -18,7 +18,7 @@ import ReportIssue from "./pages/user-dashboard/ReportIssue";
 import Profile from "./pages/user-dashboard/Profile";
 import Rewards from "./pages/user-dashboard/Rewards";
 import UserSettings from "./pages/user-dashboard/Settings";
-import HeatmapView from "./components/HeatmapView";
+import Heatmapview from "./Components/Heatmapview";
 
 
 function App() {
