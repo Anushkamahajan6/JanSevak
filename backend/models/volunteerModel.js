@@ -10,7 +10,7 @@ const volunteerSchema = new mongoose.Schema({
   badges: [{ type: String }],
   history: [{
     taskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task' },
-    status: { type: String, enum: ['Pending Approval', 'Assigned', 'Completed'] },
+   status: { type: String, enum: ['Pending Approval', 'Assigned', 'Assigned (Primary Lead)', 'Waitlisted', 'Completed'] },
     proofImages: {
       before: String,
       after: String

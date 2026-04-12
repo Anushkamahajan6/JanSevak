@@ -6,6 +6,7 @@ const {
   createProfile,
   getNearbyTasks,
   applyForTask,
+  requestMoreVolunteers,  // ← ADD THIS
   submitProof
 } = require('../controllers/volunteerController');
 
@@ -14,6 +15,7 @@ const router = express.Router();
 router.post('/profile', createProfile);
 router.get('/tasks', getNearbyTasks);
 router.post('/apply', applyForTask);
+router.post('/request-more', requestMoreVolunteers);  // ← ADD THIS
 router.post('/submit-proof', submitProof);
 
 // Toggle active/inactive status
