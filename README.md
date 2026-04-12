@@ -320,7 +320,7 @@ J --> K[Points Awarded]
 
 ## Team Name
 
- CODERS X
+ codersx
 
  ## Team Authors
 
