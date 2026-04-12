@@ -274,7 +274,32 @@ Benefits:
 
 ---
 
-#  Full Workflow
+# Installation Guide
+
+## Clone Repository
+
+```bash
+git clone https://github.com/yourusername/jansevak.git
+cd JANSEVAK
+```
+
+## Frontend Setup
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+## Backend Setup
+
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+# Full Workflow
 
 ```mermaid
 flowchart TD
@@ -289,3 +314,27 @@ G --> H[Proof Uploaded]
 H --> I[Status Updated]
 I --> J[Citizen Notified]
 J --> K[Points Awarded]
+```
+
+---
+
+## Team Name
+
+ CODERS X
+
+ ## Team Authors
+
+- **Anushka Mahajan**
+- **Iksha Malhotra**
+- **Aditya Singh**
+- **Tejasvi Sharma**
+- **Kinjal Gupta**
+
+---
+
+# Final Statement
+
+JanSevak is not just a project.  
+It is a step toward transparent, collaborative, and smart governance.
+
+> **Smart Citizens + Smart Governance = Better Communities**
