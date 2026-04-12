@@ -289,4 +289,3 @@ G --> H[Proof Uploaded]
 H --> I[Status Updated]
 I --> J[Citizen Notified]
 J --> K[Points Awarded]
-
