@@ -5,7 +5,6 @@ import {
   Upload,
   MapPin,
   Send,
-  Image as ImageIcon,
 } from "lucide-react";
 
 export default function ReportIssue() {
@@ -37,9 +36,7 @@ export default function ReportIssue() {
 
   const handleImage = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setPreview(URL.createObjectURL(file));
-    }
+    if (file) setPreview(URL.createObjectURL(file));
   };
 
   const getLocation = () => {
@@ -56,37 +53,31 @@ export default function ReportIssue() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
     alert("Issue Submitted Successfully ✅");
-
     navigate("/user");
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 p-6">
-      {/* Top */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 p-6 text-white">
       <div className="max-w-4xl mx-auto">
         <button
           onClick={() => navigate("/user")}
-          className="flex items-center gap-2 text-slate-700 hover:text-indigo-600 mb-4"
+          className="flex items-center gap-2 text-slate-300 hover:text-violet-200 mb-4 transition"
         >
           <ArrowLeft size={18} />
           Back to Dashboard
         </button>
 
-        {/* Card */}
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8">
-          <h1 className="text-3xl font-bold text-slate-800">
-            Report New Issue
-          </h1>
-          <p className="text-slate-500 mt-2">
+        <div className="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/10 p-8">
+          <h1 className="text-3xl font-bold">Report New Issue</h1>
+          <p className="text-slate-300 mt-2">
             Help improve your community by reporting civic issues.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             {/* Title */}
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-slate-200 mb-2">
                 Issue Title
               </label>
 
@@ -97,13 +88,13 @@ export default function ReportIssue() {
                 value={form.title}
                 onChange={handleChange}
                 required
-                className="w-full border border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full bg-white/10 border border-white/10 text-white placeholder-slate-300 rounded-xl px-4 py-3 outline-none"
               />
             </div>
 
             {/* Category */}
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-slate-200 mb-2">
                 Category
               </label>
 
@@ -112,19 +103,23 @@ export default function ReportIssue() {
                 value={form.category}
                 onChange={handleChange}
                 required
-                className="w-full border border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full bg-white/10 border border-white/10 text-white rounded-xl px-4 py-3 outline-none"
               >
-                <option value="">Select category</option>
+                <option value="" className="text-black">
+                  Select category
+                </option>
 
                 {categories.map((item, i) => (
-                  <option key={i}>{item}</option>
+                  <option key={i} className="text-black">
+                    {item}
+                  </option>
                 ))}
               </select>
             </div>
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-slate-200 mb-2">
                 Description
               </label>
 
@@ -135,17 +130,17 @@ export default function ReportIssue() {
                 value={form.description}
                 onChange={handleChange}
                 required
-                className="w-full border border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full bg-white/10 border border-white/10 text-white placeholder-slate-300 rounded-xl px-4 py-3 outline-none"
               ></textarea>
             </div>
 
             {/* Upload */}
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-slate-200 mb-2">
                 Upload Image
               </label>
 
-              <label className="border-2 border-dashed border-slate-300 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500 transition">
+              <label className="border-2 border-dashed border-white/20 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-white/10 transition">
                 <input
                   type="file"
                   accept="image/*"
@@ -153,8 +148,8 @@ export default function ReportIssue() {
                   onChange={handleImage}
                 />
 
-                <Upload className="text-indigo-600" />
-                <span className="mt-2 text-sm text-slate-500">
+                <Upload className="text-violet-200" />
+                <span className="mt-2 text-sm text-slate-300">
                   Click to upload image
                 </span>
               </label>
@@ -163,14 +158,14 @@ export default function ReportIssue() {
                 <img
                   src={preview}
                   alt="preview"
-                  className="mt-4 w-40 h-32 object-cover rounded-xl border"
+                  className="mt-4 w-40 h-32 object-cover rounded-xl border border-white/10"
                 />
               )}
             </div>
 
             {/* Location */}
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-sm font-medium text-slate-200 mb-2">
                 Location
               </label>
 
@@ -181,13 +176,13 @@ export default function ReportIssue() {
                   value={form.location}
                   placeholder="Auto detect or type manually"
                   onChange={handleChange}
-                  className="flex-1 border border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="flex-1 bg-white/10 border border-white/10 text-white placeholder-slate-300 rounded-xl px-4 py-3 outline-none"
                 />
 
                 <button
                   type="button"
                   onClick={getLocation}
-                  className="px-4 rounded-xl bg-slate-100 hover:bg-slate-200"
+                  className="px-4 rounded-xl bg-white/10 hover:bg-white/15 text-white transition"
                 >
                   <MapPin />
                 </button>
@@ -197,7 +192,7 @@ export default function ReportIssue() {
             {/* Submit */}
             <button
               type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-violet-500 to-indigo-500 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition hover:scale-[1.02]"
             >
               <Send size={18} />
               Submit Issue

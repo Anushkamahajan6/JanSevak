@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   Search,
   Filter,
-  Clock3,
   CheckCircle2,
   Loader2,
   AlertCircle,
@@ -50,89 +49,79 @@ export default function MyIssues() {
 
   const getBadge = (status) => {
     if (status === "Resolved")
-      return "bg-green-100 text-green-700";
+      return "bg-emerald-500/20 text-emerald-200";
     if (status === "In Progress")
-      return "bg-blue-100 text-blue-700";
-    return "bg-yellow-100 text-yellow-700";
+      return "bg-sky-500/20 text-sky-200";
+    return "bg-amber-500/20 text-amber-200";
   };
 
   const getIcon = (status) => {
-    if (status === "Resolved")
-      return <CheckCircle2 size={16} />;
-    if (status === "In Progress")
-      return <Loader2 size={16} />;
+    if (status === "Resolved") return <CheckCircle2 size={16} />;
+    if (status === "In Progress") return <Loader2 size={16} />;
     return <AlertCircle size={16} />;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 p-6 text-white">
       <div className="max-w-6xl mx-auto">
-        {/* Top */}
         <button
           onClick={() => navigate("/user")}
-          className="flex items-center gap-2 text-slate-700 hover:text-indigo-600 mb-4"
+          className="flex items-center gap-2 text-slate-300 hover:text-violet-200 mb-4 transition"
         >
           <ArrowLeft size={18} />
           Back to Dashboard
         </button>
 
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-200 p-8">
+        <div className="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/10 p-8">
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-slate-800">
-                My Issues
-              </h1>
-              <p className="text-slate-500 mt-1">
+              <h1 className="text-3xl font-bold">My Issues</h1>
+              <p className="text-slate-300 mt-1">
                 Track all reported civic issues and their progress.
               </p>
             </div>
 
             <button
               onClick={() => navigate("/user/report")}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl font-medium"
+              className="bg-gradient-to-r from-violet-500 to-indigo-500 text-white px-5 py-3 rounded-xl font-medium transition hover:scale-105"
             >
               + New Issue
             </button>
           </div>
 
-          {/* Search + Filter */}
+          {/* Search */}
           <div className="grid md:grid-cols-3 gap-4 mt-8">
-            <div className="md:col-span-2 flex items-center border border-slate-300 rounded-xl px-4">
-              <Search size={18} className="text-slate-400" />
+            <div className="md:col-span-2 flex items-center border border-white/10 bg-white/10 rounded-xl px-4">
+              <Search size={18} className="text-slate-300" />
               <input
                 type="text"
                 placeholder="Search issues..."
-                className="w-full px-3 py-3 outline-none"
+                className="w-full px-3 py-3 outline-none bg-transparent text-white placeholder-slate-300"
               />
             </div>
 
-            <button className="flex items-center justify-center gap-2 border border-slate-300 rounded-xl px-4 py-3 hover:bg-slate-50">
+            <button className="flex items-center justify-center gap-2 border border-white/10 bg-white/10 text-slate-200 rounded-xl px-4 py-3 hover:bg-white/15 transition">
               <Filter size={18} />
               Filter
             </button>
           </div>
 
-          {/* Issue Cards */}
+          {/* Cards */}
           <div className="mt-8 space-y-4">
             {issues.map((item, i) => (
               <div
                 key={i}
-                className="bg-slate-50 border border-slate-200 rounded-2xl p-5 hover:shadow-lg transition"
+                className="bg-white/10 border border-white/10 rounded-2xl p-5 hover:bg-white/15 transition"
               >
                 <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-slate-800">
-                        {item.title}
-                      </h3>
-
-                      <span className="text-xs text-slate-400">
-                        {item.id}
-                      </span>
+                      <h3 className="font-semibold">{item.title}</h3>
+                      <span className="text-xs text-slate-300">{item.id}</span>
                     </div>
 
-                    <p className="text-sm text-slate-500 mt-1">
+                    <p className="text-sm text-slate-300 mt-1">
                       {item.category} • Reported {item.date}
                     </p>
                   </div>
@@ -147,26 +136,25 @@ export default function MyIssues() {
                       {item.status}
                     </span>
 
-                    <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-lg text-xs font-semibold">
+                    <span className="bg-fuchsia-500/20 text-fuchsia-200 px-3 py-1 rounded-lg text-xs font-semibold">
                       {item.points}
                     </span>
 
-                    <button className="text-indigo-600 text-sm font-medium">
+                    <button className="text-violet-200 hover:text-white text-sm font-medium transition">
                       View Details →
                     </button>
                   </div>
                 </div>
 
-                {/* Progress */}
                 <div className="mt-4">
-                  <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                     <div
                       className={`h-full ${
                         item.status === "Resolved"
-                          ? "w-full bg-green-500"
+                          ? "w-full bg-emerald-400"
                           : item.status === "In Progress"
-                          ? "w-2/3 bg-blue-500"
-                          : "w-1/4 bg-yellow-500"
+                          ? "w-2/3 bg-sky-400"
+                          : "w-1/4 bg-amber-400"
                       }`}
                     ></div>
                   </div>
@@ -177,19 +165,19 @@ export default function MyIssues() {
 
           {/* Summary */}
           <div className="grid md:grid-cols-3 gap-4 mt-10">
-            <div className="bg-green-50 rounded-2xl p-5">
-              <p className="text-sm text-green-700">Resolved</p>
-              <h2 className="text-3xl font-bold text-green-800">2</h2>
+            <div className="bg-emerald-500/20 border border-white/10 rounded-2xl p-5">
+              <p className="text-sm text-emerald-200">Resolved</p>
+              <h2 className="text-3xl font-bold">2</h2>
             </div>
 
-            <div className="bg-blue-50 rounded-2xl p-5">
-              <p className="text-sm text-blue-700">In Progress</p>
-              <h2 className="text-3xl font-bold text-blue-800">1</h2>
+            <div className="bg-sky-500/20 border border-white/10 rounded-2xl p-5">
+              <p className="text-sm text-sky-200">In Progress</p>
+              <h2 className="text-3xl font-bold">1</h2>
             </div>
 
-            <div className="bg-yellow-50 rounded-2xl p-5">
-              <p className="text-sm text-yellow-700">Pending</p>
-              <h2 className="text-3xl font-bold text-yellow-800">1</h2>
+            <div className="bg-amber-500/20 border border-white/10 rounded-2xl p-5">
+              <p className="text-sm text-amber-200">Pending</p>
+              <h2 className="text-3xl font-bold">1</h2>
             </div>
           </div>
         </div>
