@@ -1,27 +1,21 @@
-import React from "react";
-
-const volunteers = [
-  {
-    id: 1,
-    name: "Rohit Sharma",
-    type: "NGO",
-    ngo: "Animal Rescue Trust"
-  },
-  {
-    id: 2,
-    name: "Priya Verma",
-    type: "Independent",
-    ngo: null
-  },
-  {
-    id: 3,
-    name: "Aman Gupta",
-    type: "NGO",
-    ngo: "Clean City NGO"
-  }
-];
+import React, { useEffect, useState } from "react";
 
 export default function VolunteersPage() {
+  const [volunteers, setVolunteers] = useState([]);
+
+  useEffect(() => {
+    const fetchVolunteers = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/volunteer")
+        const data = await res.json();
+        setVolunteers(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchVolunteers();
+  }, []);
   return (
     <div className="p-6 bg-[#F5F7FB] min-h-screen">
 
@@ -41,9 +35,9 @@ export default function VolunteersPage() {
             <div>
               <p className="text-sm font-medium">{vol.name}</p>
 
-              {vol.type === "NGO" ? (
+              {vol.type === "NGO_Affiliated" ? (
                 <p className="text-xs text-gray-400">
-                  Affiliated with {vol.ngo}
+                  Affiliated with {vol.ngoName}
                 </p>
               ) : (
                 <p className="text-xs text-gray-400">
@@ -54,7 +48,7 @@ export default function VolunteersPage() {
 
             {/* RIGHT */}
             <div>
-              {vol.type === "NGO" ? (
+              {vol.type === "NGO_Affiliated" ? (
                 <span className="bg-indigo-100 text-indigo-600 px-2 py-1 rounded text-xs">
                   NGO
                 </span>

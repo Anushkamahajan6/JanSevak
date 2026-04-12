@@ -10,7 +10,7 @@ const twilioRoutes = require('./routes/twilioRoutes');
 const heatmapRoutes = require('./routes/heatmap');
 const issueRoutes = require('./routes/issueRoutes');
 const userRoutes = require('./routes/userRoutes');
-
+const adminRoutes = require('./routes/adminRoutes');
 // Initialize environment variables
 dotenv.config();
 
@@ -28,6 +28,7 @@ app.use(cors({
   credentials: true
 }));
 // Routes
+app.use('/admin', adminRoutes);
 app.use('/twilio', twilioRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
