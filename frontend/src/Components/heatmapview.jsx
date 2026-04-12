@@ -2,158 +2,334 @@ import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-const HeatmapView = () => {
+// Pass currentUser from VolunteerPage so we know the volunteerId
+const HeatmapView = ({ currentUser }) => {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Side panel
+  const [panel, setPanel] = useState(null); // selected issue properties
+  const [submitting, setSubmitting] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [alreadyInterested, setAlreadyInterested] = useState(false);
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const handleICanHelp = async () => {
+    if (!currentUser?._id) {
+      showToast('Please register as a volunteer first.', 'error');
+      return;
+    }
+    if (!panel?.id) return;
+
+    setSubmitting(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/volunteer/express-interest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          volunteerId: currentUser._id,
+          issueId: panel.id,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 400 && data.error?.includes('Already')) {
+          setAlreadyInterested(true);
+          showToast('You already expressed interest in this issue.', 'info');
+        } else {
+          throw new Error(data.error || 'Failed');
+        }
+      } else {
+        setAlreadyInterested(true);
+        showToast('✅ Request sent! Admin will review and assign you.');
+      }
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   useEffect(() => {
-    // Read token inside useEffect so Vite has time to inject it
     const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN;
-
     if (!mapboxToken) {
-      setError('Mapbox token is not configured. Please add VITE_MAPBOX_TOKEN to your .env file');
+      setError('Mapbox token not configured. Add VITE_MAPBOX_TOKEN to .env');
       setLoading(false);
       return;
     }
-
-    if (!mapContainer.current) {
-      setError('Map container is not available');
-      setLoading(false);
-      return;
-    }
-
+    if (!mapContainer.current) return;
     if (map.current) return;
 
-    try {
-      mapboxgl.accessToken = mapboxToken;
+    mapboxgl.accessToken = mapboxToken;
 
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/dark-v11',
-        center: [77.1025, 28.7041],
-        zoom: 11,
-      });
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/dark-v11',
+      center: [77.5092, 28.4621],
+      zoom: 12,
+    });
 
-      map.current.on('load', () => {
-        if (!map.current.getSource('issues-data')) {
-          map.current.addSource('issues-data', {
-            type: 'geojson',
-            data: 'http://localhost:5000/api/heatmap'
-          });
-        }
+    map.current.on('load', () => {
+      fetch('http://localhost:5000/api/heatmap')
+        .then(r => { if (!r.ok) throw new Error(`Server ${r.status}`); return r.json(); })
+        .then(geojson => {
+          map.current.addSource('issues-data', { type: 'geojson', data: geojson });
 
-        if (!map.current.getLayer('issues-heat')) {
+          // Heatmap layer
           map.current.addLayer({
             id: 'issues-heat',
             type: 'heatmap',
             source: 'issues-data',
-            maxzoom: 12,
+            maxzoom: 14,
             paint: {
               'heatmap-weight': ['interpolate', ['linear'], ['get', 'weight'], 0, 0, 1, 1],
-              'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 15, 3],
+              'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 14, 3],
               'heatmap-color': [
                 'interpolate', ['linear'], ['heatmap-density'],
-                0, 'rgba(0,0,255,0)',
+                0,   'rgba(0,0,255,0)',
                 0.2, 'rgb(0,255,255)',
                 0.4, 'rgb(0,255,0)',
                 0.6, 'rgb(255,255,0)',
-                1, 'rgb(255,0,0)'
+                1,   'rgb(255,0,0)'
               ],
-              'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 2, 15, 20],
-              'heatmap-opacity': 0.8
-            }
+              'heatmap-radius': 50,
+              'heatmap-opacity': 0.85,
+            },
           });
-        }
 
-        if (!map.current.getLayer('issues-pins')) {
+          // Clickable pins — no minzoom so always visible
           map.current.addLayer({
             id: 'issues-pins',
             type: 'circle',
             source: 'issues-data',
-            minzoom: 8,
             paint: {
               'circle-color': [
                 'match', ['get', 'status'],
-                'pending', '#EF4444',
+                'pending',     '#EF4444',
+                'open',        '#EF4444',
                 'in-progress', '#FBBF24',
-                'resolved', '#10B981',
-                '#888888'
+                'resolved',    '#10B981',
+                '#EF4444'
               ],
-              'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 6, 15, 12],
+              'circle-radius': 10,
               'circle-stroke-width': 2,
-              'circle-stroke-color': '#ffffff'
-            }
+              'circle-stroke-color': '#ffffff',
+              'circle-opacity': 0.95,
+            },
           });
-        }
 
-        setLoading(false);
-      });
+          map.current.on('mouseenter', 'issues-pins', () => {
+            map.current.getCanvas().style.cursor = 'pointer';
+          });
+          map.current.on('mouseleave', 'issues-pins', () => {
+            map.current.getCanvas().style.cursor = '';
+          });
 
-      map.current.on('error', (e) => {
-        console.error('Map error:', e);
-        setError('Failed to load map. Please check your Mapbox token.');
-        setLoading(false);
-      });
+          // ✅ Click pin → show issue details panel
+          map.current.on('click', 'issues-pins', (e) => {
+            const props = e.features[0].properties;
+            setAlreadyInterested(false); // reset for new issue
+            setPanel(props);
+          });
 
-    } catch (err) {
-      console.error('Error initializing map:', err);
-      setError(err.message);
+          // Click empty space → close panel
+          map.current.on('click', (e) => {
+            const features = map.current.queryRenderedFeatures(e.point, { layers: ['issues-pins'] });
+            if (features.length === 0) setPanel(null);
+          });
+
+          setLoading(false);
+        })
+        .catch(err => {
+          setError(`Failed to load data: ${err.message}`);
+          setLoading(false);
+        });
+    });
+
+    map.current.on('error', () => {
+      setError('Map failed to load. Check Mapbox token.');
       setLoading(false);
-    }
+    });
 
     return () => {
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-      }
+      if (map.current) { map.current.remove(); map.current = null; }
     };
   }, []);
 
+  const statusColor = (status) => ({
+    open:          { bg: 'rgba(239,68,68,0.15)',  text: '#EF4444', label: 'Open' },
+    pending:       { bg: 'rgba(239,68,68,0.15)',  text: '#EF4444', label: 'Pending' },
+    'in-progress': { bg: 'rgba(251,191,36,0.15)', text: '#FBBF24', label: 'In Progress' },
+    resolved:      { bg: 'rgba(16,185,129,0.15)', text: '#10B981', label: 'Resolved' },
+  }[status] || { bg: 'rgba(156,163,175,0.15)', text: '#9CA3AF', label: status });
+
   return (
-    <div className="relative w-full h-full rounded-2xl overflow-hidden border border-slate-700 shadow-2xl bg-slate-900">
+    <div style={{ position: 'relative', width: '100%', height: '400px', borderRadius: '14px', overflow: 'hidden' }}>
 
-      {error && (
-        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-900/95 backdrop-blur-sm gap-4 p-6">
-          <div className="text-center">
-            <h3 className="text-red-400 font-bold text-lg mb-2">⚠️ Map Error</h3>
-            <p className="text-slate-300 text-sm">{error}</p>
-          </div>
-        </div>
-      )}
+      {/* Map container */}
+      <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
 
+      {/* Loading */}
       {loading && !error && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-3">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
-            <p className="text-slate-300 text-sm">Loading heatmap...</p>
-          </div>
+        <div style={overlayStyle}>
+          <div style={spinnerStyle} />
+          <p style={{ color: '#cbd5e1', fontSize: '14px', marginTop: '12px' }}>Loading heatmap...</p>
         </div>
       )}
 
+      {/* Error */}
+      {error && (
+        <div style={overlayStyle}>
+          <p style={{ color: '#f87171', fontWeight: 600 }}>⚠️ {error}</p>
+        </div>
+      )}
+
+      {/* Legend */}
       {!error && (
-        <div className="absolute top-4 left-4 z-10 space-y-2">
-          <div className="bg-slate-800/90 backdrop-blur-md p-4 rounded-xl border border-white/10 shadow-lg">
-            <h3 className="text-white font-bold flex items-center gap-2">
-              <span className="flex h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
-              Live Issue Hotspots
-            </h3>
-            <p className="text-slate-400 text-xs mt-1">Real-time density from MongoDB Atlas</p>
-            <div className="mt-4 space-y-2">
-              <div className="flex items-center justify-between text-[10px] text-slate-400 uppercase tracking-tighter">
-                <span>Low Density</span>
-                <span>High Density</span>
-              </div>
-              <div className="h-2 w-full rounded-full bg-gradient-to-r from-blue-500 via-yellow-400 to-red-600"></div>
-            </div>
+        <div style={legendStyle}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', display: 'inline-block', animation: 'pulse 2s infinite' }} />
+            <span style={{ color: '#fff', fontWeight: 700, fontSize: '13px' }}>Live Hotspots</span>
           </div>
+          <p style={{ color: '#94a3b8', fontSize: '11px', margin: 0 }}>Click a pin to volunteer</p>
         </div>
       )}
 
-      <div ref={mapContainer} className="w-full h-full" />
+      {/* ✅ ISSUE DETAIL PANEL — slides in from right */}
+      {panel && (
+        <div style={panelStyle}>
+          {/* Close */}
+          <button onClick={() => setPanel(null)} style={closeBtnStyle}>✕</button>
+
+          {/* Status badge */}
+          <div style={{ marginBottom: '6px' }}>
+            <span style={{
+              fontSize: '11px', fontWeight: 700, padding: '3px 10px',
+              borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.05em',
+              background: statusColor(panel.status).bg,
+              color: statusColor(panel.status).text,
+            }}>
+              {statusColor(panel.status).label}
+            </span>
+          </div>
+
+          {/* Title */}
+          <h3 style={{ margin: '8px 0 4px', color: '#fff', fontSize: '16px', fontWeight: 700 }}>
+            {panel.title || panel.category}
+          </h3>
+
+          {/* Category */}
+          <p style={{ margin: '0 0 10px', color: '#94a3b8', fontSize: '13px' }}>
+            📂 {panel.category}
+          </p>
+
+          {/* Severity stars */}
+          <p style={{ margin: '0 0 12px', fontSize: '14px' }}>
+            {[1,2,3,4,5].map(i => (
+              <span key={i} style={{ color: i <= panel.severity ? '#FBBF24' : '#374151' }}>★</span>
+            ))}
+            <span style={{ color: '#6b7280', fontSize: '12px', marginLeft: '6px' }}>Severity {panel.severity}/5</span>
+          </p>
+
+          {/* Divider */}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '12px 0' }} />
+
+          {/* Already assigned notice */}
+          {panel.status === 'in-progress' || panel.status === 'resolved' ? (
+            <div style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: '10px', padding: '10px 12px' }}>
+              <p style={{ margin: 0, color: '#FBBF24', fontSize: '13px', fontWeight: 600 }}>
+                {panel.status === 'resolved' ? '✅ This issue is already resolved.' : '⏳ A volunteer is already working on this.'}
+              </p>
+            </div>
+          ) : alreadyInterested ? (
+            <div style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.4)', borderRadius: '10px', padding: '10px 12px' }}>
+              <p style={{ margin: 0, color: '#a5b4fc', fontSize: '13px', fontWeight: 600 }}>
+                ✋ Request sent! Admin will review and assign you.
+              </p>
+            </div>
+          ) : (
+            <button
+              onClick={handleICanHelp}
+              disabled={submitting}
+              style={{
+                width: '100%', padding: '12px', border: 'none', borderRadius: '12px',
+                background: submitting ? 'rgba(99,102,241,0.5)' : 'linear-gradient(135deg,#8b5cf6,#6366f1)',
+                color: '#fff', fontWeight: 700, fontSize: '14px',
+                cursor: submitting ? 'not-allowed' : 'pointer',
+                boxShadow: '0 4px 15px rgba(99,102,241,0.4)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              }}
+            >
+              {submitting ? (
+                <><span style={{ ...miniSpinner }} />  Sending...</>
+              ) : (
+                '🙋 I Can Help!'
+              )}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 50, padding: '10px 20px', borderRadius: '12px',
+          background: toast.type === 'error' ? '#dc2626' : toast.type === 'info' ? '#4f46e5' : '#16a34a',
+          color: '#fff', fontWeight: 600, fontSize: '13px', whiteSpace: 'nowrap',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+        }}>
+          {toast.msg}
+        </div>
+      )}
     </div>
   );
+};
+
+// ── Styles ──────────────────────────────────────────────────────────────────
+const overlayStyle = {
+  position: 'absolute', inset: 0, zIndex: 20,
+  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+  background: 'rgba(15,23,42,0.8)', backdropFilter: 'blur(4px)',
+};
+
+const spinnerStyle = {
+  width: '36px', height: '36px', borderRadius: '50%',
+  border: '3px solid rgba(255,255,255,0.2)', borderTop: '3px solid #ef4444',
+  animation: 'spin 1s linear infinite',
+};
+
+const miniSpinner = {
+  width: '14px', height: '14px', borderRadius: '50%', display: 'inline-block',
+  border: '2px solid rgba(255,255,255,0.3)', borderTop: '2px solid #fff',
+  animation: 'spin 0.8s linear infinite',
+};
+
+const legendStyle = {
+  position: 'absolute', top: '12px', left: '12px', zIndex: 10,
+  background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(10px)',
+  border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '12px 14px',
+};
+
+const panelStyle = {
+  position: 'absolute', top: '12px', right: '12px', bottom: '12px',
+  zIndex: 20, width: '240px',
+  background: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(20px)',
+  border: '1px solid rgba(255,255,255,0.12)', borderRadius: '16px',
+  padding: '18px 16px', overflowY: 'auto',
+  boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+};
+
+const closeBtnStyle = {
+  position: 'absolute', top: '10px', right: '12px',
+  background: 'none', border: 'none', color: '#6b7280',
+  fontSize: '16px', cursor: 'pointer', lineHeight: 1,
 };
 
 export default HeatmapView;
