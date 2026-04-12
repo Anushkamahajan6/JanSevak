@@ -9,6 +9,7 @@ export const useIssueNotifications = (onNewIssue) => {
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
 
+  // Connect once on mount
   useEffect(() => {
     // Connect to Socket.io server
     const socketInstance = io(import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000', {
@@ -28,24 +29,34 @@ export const useIssueNotifications = (onNewIssue) => {
       setIsConnected(false);
     });
 
-    socketInstance.on('new_issue_created', (data) => {
-      console.log('🔔 New issue notification received:', data);
-      
-      // Play notification sound
-      playNotificationSound();
-      
-      // Call the callback with the new issue data
-      if (onNewIssue) {
-        onNewIssue(data);
-      }
-    });
-
     setSocket(socketInstance);
 
     return () => {
       socketInstance.disconnect();
     };
-  }, [onNewIssue]);
+  }, []); // Empty dependency array - connect only once
+
+  // Update listener when onNewIssue changes
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.off('new_issue_created'); // Remove old listener to prevent duplicates
+    socket.on('new_issue_created', (data) => {
+      console.log('🔔 New issue notification received:', data);
+      
+      // Play notification sound
+      playNotificationSound();
+      
+      // Call the callback with the new issue data if provided
+      if (onNewIssue) {
+        onNewIssue(data);
+      }
+    });
+
+    return () => {
+      socket.off('new_issue_created');
+    };
+  }, [socket, onNewIssue]); // Update listener when callback changes
 
   return { socket, isConnected };
 };
