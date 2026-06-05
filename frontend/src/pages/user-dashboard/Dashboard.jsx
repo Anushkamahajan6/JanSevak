@@ -1,85 +1,57 @@
-import React, { useState, useEffect } from "react";
-import {
-  Bell,
-  LayoutDashboard,
-  Clock3,
-  FilePlus2,
-  Gift,
-  User,
-  Settings,
-  Plus,
-} from "lucide-react";
+import { useState, useEffect } from "react";
+import { Bell, LayoutDashboard, Clock3, FilePlus2, Gift, User, Settings, Plus } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useUser } from "../../context/userContext";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [showNotifications, setShowNotifications] = useState(false);
+  const { user } = useUser();
+
   const [loading, setLoading] = useState(true);
-  const [dashboardStats, setDashboardStats] = useState({
-    totalIssues: 0,
-    resolved: 0,
-    pending: 0,
-  });
+  const [stats, setStats] = useState({ totalIssues: 0, resolved: 0, pending: 0, inProgress: 0 });
   const [userIssues, setUserIssues] = useState([]);
 
-  const [notifications, setNotifications] = useState([
-    { id: 1, text: "Your garbage issue was resolved ✅", read: false },
-    { id: 2, text: "New reward unlocked 🎁", read: false },
-    { id: 3, text: "Volunteer assigned to your report 👷", read: true },
-  ]);
-
-  const [userName, setUserName] = useState("Arjun");
-  const [editingName, setEditingName] = useState(false);
-  const [newQuery, setNewQuery] = useState("");
+  const apiBase = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      const apiBase = import.meta.env.VITE_API_BASE_URL;
+    if (!user) return;
+    const fetchData = async () => {
       try {
-        setLoading(true);
-        
-        // Fetch dashboard stats
-        const statsRes = await fetch(`${apiBase}/api/user/dashboard`, {
-          credentials: "include",
-        });
-        if (statsRes.ok) {
-          const statsData = await statsRes.json();
-          setDashboardStats(statsData);
-        }
-
-        // Fetch user's issues
-        const issuesRes = await fetch(`${apiBase}/api/issues`, {
-          credentials: "include",
-        });
+        const [statsRes, issuesRes] = await Promise.all([
+          fetch(`${apiBase}/api/user/dashboard`, { credentials: "include" }),
+          fetch(`${apiBase}/api/issues/user/${user.id}`, { credentials: "include" }),
+        ]);
+        if (statsRes.ok) setStats(await statsRes.json());
         if (issuesRes.ok) {
-          const issuesData = await issuesRes.json();
-          setUserIssues(issuesData.issues || []);
+          const d = await issuesRes.json();
+          setUserIssues(d.issues || []);
         }
       } catch (err) {
-        console.error('Error fetching dashboard data:', err);
+        console.error(err);
       } finally {
         setLoading(false);
       }
     };
+    fetchData();
+  }, [user]);
 
-    fetchDashboardData();
-  }, []);
+  // Points: 10 per issue filed, +20 bonus per resolved
+  const points = stats.totalIssues * 10 + stats.resolved * 20;
 
-  const stats = [
-    { title: "Issues Filed", value: dashboardStats.totalIssues.toString(), sub: "+2 this week" },
-    { title: "Resolved", value: dashboardStats.resolved.toString(), sub: "+1 resolved" },
-    { title: "Pending", value: dashboardStats.pending.toString(), sub: "In Progress" },
-    { title: "Total Points", value: "340", sub: "+50 earned" },
+  const getLevel = (pts) => {
+    if (pts >= 500) return "Level 4 — Community Leader";
+    if (pts >= 300) return "Level 3 — Civic Champion";
+    if (pts >= 100) return "Level 2 — Active Reporter";
+    return "Level 1 — New Reporter";
+  };
+
+  const statCards = [
+    { title: "Issues Filed", value: stats.totalIssues, sub: "Total reported" },
+    { title: "Resolved", value: stats.resolved, sub: "Closed issues" },
+    { title: "Pending", value: stats.pending, sub: "Awaiting action" },
+    { title: "Points Earned", value: points, sub: getLevel(points) },
   ];
-
-  const displayIssues = userIssues.slice(0, 4).map(issue => ({
-    title: issue.title || issue.category,
-    meta: `${issue.category || 'Issue'} • Filed ${new Date(issue.createdAt).toLocaleDateString()}`,
-    status: issue.status ? issue.status.charAt(0).toUpperCase() + issue.status.slice(1) : 'Pending',
-    pts: "+50",
-    emoji: "📋",
-  }));
 
   const nav = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/user" },
@@ -90,103 +62,109 @@ export default function Dashboard() {
     { name: "Settings", icon: Settings, path: "/user/settings" },
   ];
 
-  const [queries, setQueries] = useState([
-    "Garbage overflow near canteen",
-    "Broken street light in Block C",
-    "Water leakage in Hostel B",
-  ]);
-
   const badge = (status) => {
-    const lowerStatus = status.toLowerCase();
-    if (lowerStatus === "resolved")
-      return "bg-emerald-500/20 text-emerald-200";
-    if (lowerStatus === "in-progress" || lowerStatus === "in progress")
-      return "bg-sky-500/20 text-sky-200";
+    const s = status.toLowerCase();
+    if (s === "resolved") return "bg-emerald-500/20 text-emerald-200";
+    if (s === "in-progress") return "bg-sky-500/20 text-sky-200";
     return "bg-amber-500/20 text-amber-200";
   };
+
+  const initials = user?.name
+    ? user.name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)
+    : "?";
+
+  const greeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return "Good morning";
+    if (h < 17) return "Good afternoon";
+    return "Good evening";
+  };
+
+  const recentIssues = userIssues.slice(0, 4);
+
+  // Category counts from real issues
+  const categoryCounts = userIssues.reduce((acc, issue) => {
+    const cat = issue.category || "Other";
+    acc[cat] = (acc[cat] || 0) + 1;
+    return acc;
+  }, {});
+  const topCategories = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1]).slice(0, 4);
+
+  // Issue tracker percentages
+  const total = stats.totalIssues || 1;
+  const trackerBars = [
+    { label: "Filed", pct: 100, color: "bg-violet-300" },
+    { label: "In Progress", pct: Math.round((stats.inProgress / total) * 100), color: "bg-amber-300" },
+    { label: "Resolved", pct: Math.round((stats.resolved / total) * 100), color: "bg-emerald-300" },
+    { label: "Pending", pct: Math.round((stats.pending / total) * 100), color: "bg-rose-300" },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 flex text-white">
       {/* Sidebar */}
-      <aside className="w-64 bg-white/10 backdrop-blur-xl border-r border-white/10 flex flex-col">
+      <aside className="w-64 bg-white/10 backdrop-blur-xl border-r border-white/10 flex flex-col flex-shrink-0">
         <div className="p-6 border-b border-white/10">
-          <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center">
-            J
-          </div>
+          <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center font-bold text-sm">J</div>
           <h1 className="mt-3 font-bold text-lg">JanSevak</h1>
-          <p className="text-sm text-slate-300">Community Issue Portal</p>
+          <p className="text-xs text-slate-400">Community Issue Portal</p>
         </div>
-
-        <nav className="p-4 space-y-2">
-          {nav.map((item, i) => {
+        <nav className="p-4 space-y-1 flex-1">
+          {nav.map((item) => {
             const Icon = item.icon;
             return (
               <button
-                key={i}
+                key={item.path}
                 onClick={() => navigate(item.path)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl ${
-                  location.pathname === item.path
-                    ? "bg-white/15"
-                    : "hover:bg-white/10 text-slate-200"
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition ${
+                  location.pathname === item.path ? "bg-white/15 text-white font-medium" : "text-slate-300 hover:bg-white/10 hover:text-white"
                 }`}
               >
-                <Icon size={18} />
+                <Icon size={16} />
                 {item.name}
               </button>
             );
           })}
         </nav>
-
-        <div className="mt-auto p-4 border-t border-white/10 flex gap-3 items-center">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 flex items-center justify-center">
-            AK
+        <div className="p-4 border-t border-white/10 flex gap-3 items-center">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 flex items-center justify-center text-xs font-bold flex-shrink-0">
+            {initials}
           </div>
-          <div>
-            <p className="font-semibold text-sm">Arjun Kumar</p>
-            <p className="text-xs text-slate-300">Reporter</p>
+          <div className="min-w-0">
+            <p className="font-semibold text-sm truncate">{user?.name || "—"}</p>
+            <p className="text-xs text-slate-400">Reporter</p>
           </div>
         </div>
       </aside>
 
       {/* Main */}
-      <main className="flex-1">
+      <main className="flex-1 overflow-auto">
         {/* Topbar */}
-        <header className="bg-white/10 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex justify-between items-center">
+        <header className="bg-white/5 border-b border-white/10 px-6 py-4 flex justify-between items-center">
           <div>
-            <h2 className="text-xl font-bold">Good morning, {userName}</h2>
-            <p className="text-sm text-slate-300">
-              Saturday, 11 April 2026 — SRM Campus
-            </p>
+            <h2 className="text-lg font-bold">{greeting()}, {user?.name?.split(" ")[0] || "—"}</h2>
+            <p className="text-xs text-slate-400">{new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
           </div>
-
           <div className="flex gap-3 items-center">
-            <button className="w-10 h-10 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center">
-              <Bell size={18} />
+            <button className="w-9 h-9 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center hover:bg-white/15 transition">
+              <Bell size={16} />
             </button>
-
             <button
               onClick={() => navigate("/user/report")}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 flex items-center gap-2"
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 flex items-center gap-2 text-sm font-medium hover:opacity-90 transition"
             >
-              <Plus size={16} />
-              File New Issue
+              <Plus size={15} /> File New Issue
             </button>
           </div>
         </header>
 
         <div className="p-6 space-y-6">
           {/* Stats */}
-          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            {stats.map((card, i) => (
-              <div
-                key={i}
-                className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl p-5"
-              >
-                <div className="text-xs text-violet-200 bg-white/10 px-3 py-1 rounded-lg w-fit">
-                  {card.sub}
-                </div>
-                <h3 className="text-3xl font-bold mt-4">{card.value}</h3>
-                <p className="text-slate-300">{card.title}</p>
+          <section className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+            {statCards.map((card, i) => (
+              <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                <p className="text-xs text-slate-400 mb-3">{card.sub}</p>
+                <h3 className="text-3xl font-bold">{loading ? "—" : card.value}</h3>
+                <p className="text-sm text-slate-300 mt-1">{card.title}</p>
               </div>
             ))}
           </section>
@@ -194,142 +172,99 @@ export default function Dashboard() {
           {/* Row 2 */}
           <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             {/* Recent Issues */}
-            <div className="xl:col-span-2 bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl p-5">
-              <div className="flex justify-between mb-4">
-                <h3 className="font-bold">Recent Issues</h3>
-                <button onClick={() => navigate("/user/my-issues")} className="text-violet-200">See all →</button>
+            <div className="xl:col-span-2 bg-white/5 border border-white/10 rounded-2xl p-5">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold text-sm">Recent Issues</h3>
+                <button onClick={() => navigate("/user/my-issues")} className="text-xs text-violet-300 hover:text-violet-200 transition">See all →</button>
               </div>
-
               <div className="space-y-3">
-                {displayIssues.length > 0 ? (
-                  displayIssues.map((item, i) => (
-                    <div
-                      key={i}
-                      className="bg-white/10 border border-white/10 rounded-xl p-4 flex items-center gap-3"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                        {item.emoji}
+                {loading ? (
+                  <p className="text-slate-400 text-sm">Loading...</p>
+                ) : recentIssues.length > 0 ? (
+                  recentIssues.map((issue, i) => {
+                    const status = issue.status ? issue.status.charAt(0).toUpperCase() + issue.status.slice(1) : "Pending";
+                    return (
+                      <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{issue.title || issue.category}</p>
+                          <p className="text-xs text-slate-400 mt-0.5">{issue.category} • {new Date(issue.createdAt).toLocaleDateString("en-IN")}</p>
+                        </div>
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${badge(status)}`}>{status}</span>
+                        <span className="px-2 py-1 bg-fuchsia-500/20 text-fuchsia-200 rounded-lg text-xs flex-shrink-0">+10 pts</span>
                       </div>
-
-                      <div className="flex-1">
-                        <p>{item.title}</p>
-                        <p className="text-sm text-slate-300">{item.meta}</p>
-                      </div>
-
-                      <span className={`px-3 py-1 rounded-full text-xs ${badge(item.status)}`}>
-                        {item.status}
-                      </span>
-
-                      <span className="px-2 py-1 bg-fuchsia-500/20 text-fuchsia-200 rounded-lg text-xs">
-                        {item.pts}
-                      </span>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
-                  <p className="text-slate-300 text-sm">No issues yet. Start by filing a new issue!</p>
+                  <p className="text-slate-400 text-sm">No issues yet. Start by filing one.</p>
                 )}
               </div>
             </div>
 
-            {/* Right */}
-            <div className="space-y-6">
-              <div className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl p-5">
-                <div className="flex justify-between">
-                  <h3 className="font-bold">Your Points</h3>
-                  <button onClick={() => navigate("/user/rewards")} className="text-violet-200">Rewards →</button>
+            {/* Right column */}
+            <div className="space-y-4">
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-semibold text-sm">Your Points</h3>
+                  <button onClick={() => navigate("/user/rewards")} className="text-xs text-violet-300 hover:text-violet-200 transition">Rewards →</button>
                 </div>
-
-                <div className="mt-4 bg-white/10 rounded-2xl p-6 text-center">
-                  <h2 className="text-5xl font-bold">340</h2>
-                  <p className="text-slate-300">Civic Champion — Level 3</p>
+                <div className="bg-white/5 rounded-xl p-5 text-center">
+                  <h2 className="text-4xl font-bold">{loading ? "—" : points}</h2>
+                  <p className="text-xs text-slate-400 mt-1">{getLevel(points)}</p>
                 </div>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl p-5">
-                <h3 className="font-bold mb-4">Issue Categories</h3>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    ["Infrastructure", 4],
-                    ["Sanitation", 3],
-                    ["Roads", 2],
-                    ["Utilities", 3],
-                  ].map((cat, i) => (
-                    <div
-                      key={i}
-                      className="bg-white/10 rounded-xl p-3 flex justify-between"
-                    >
-                      <span>{cat[0]}</span>
-                      <span>{cat[1]}</span>
-                    </div>
-                  ))}
-                </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                <h3 className="font-semibold text-sm mb-3">Your Categories</h3>
+                {topCategories.length > 0 ? (
+                  <div className="space-y-2">
+                    {topCategories.map(([cat, count], i) => (
+                      <div key={i} className="flex justify-between items-center bg-white/5 rounded-xl px-3 py-2 text-sm">
+                        <span className="text-slate-300">{cat}</span>
+                        <span className="text-slate-400 text-xs">{count} issue{count > 1 ? "s" : ""}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-400 text-xs">No issues filed yet.</p>
+                )}
               </div>
             </div>
           </section>
 
           {/* Bottom Row */}
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white/10 rounded-2xl p-5 border border-white/10">
-  <h3 className="font-bold mb-4">Monthly Activity</h3>
-
-  <div className="flex items-end gap-2 h-32">
-    {[30, 55, 40, 80, 60, 90, 100].map((h, i) => (
-      <div
-        key={i}
-        className="flex-1 bg-violet-300 hover:bg-violet-200 rounded-t-md transition"
-        style={{ height: `${h}%` }}
-      ></div>
-    ))}
-  </div>
-
-  <div className="flex justify-between text-xs text-slate-300 mt-2">
-    <span>Oct</span>
-    <span>Apr</span>
-  </div>
-</div>
-
-            <div className="bg-white/10 rounded-2xl p-5 border border-white/10">
-  <h3 className="font-bold mb-4">Issue Tracker</h3>
-
-  {[
-    ["Filed", "100%", "bg-violet-300"],
-    ["In Progress", "25%", "bg-amber-300"],
-    ["Resolved", "58%", "bg-emerald-300"],
-    ["Pending", "17%", "bg-rose-300"],
-  ].map((item, i) => (
-    <div key={i} className="mb-4">
-      <div className="flex justify-between text-sm mb-1">
-        <span>{item[0]}</span>
-        <span>{item[1]}</span>
-      </div>
-
-      <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-        <div
-          className={`h-full ${item[2]} rounded-full`}
-          style={{ width: item[1] }}
-        ></div>
-      </div>
-    </div>
-  ))}
-</div>
-
-            <div className="bg-white/10 rounded-2xl p-5 border border-white/10">
-              <h3 className="font-bold mb-4">Community Hotspots</h3>
-
-              {[
-                ["Block C Area", "High"],
-                ["Main Canteen", "Medium"],
-                ["Hostel Block B", "Low"],
-              ].map((spot, i) => (
-                <div
-                  key={i}
-                  className="bg-white/10 rounded-xl p-3 mb-3 flex justify-between"
-                >
-                  <span>{spot[0]}</span>
-                  <span>{spot[1]}</span>
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
+              <h3 className="font-semibold text-sm mb-4">Issue Tracker</h3>
+              {trackerBars.map((item, i) => (
+                <div key={i} className="mb-3">
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-slate-300">{item.label}</span>
+                    <span className="text-slate-400">{item.pct}%</span>
+                  </div>
+                  <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.pct}%` }} />
+                  </div>
                 </div>
               ))}
+            </div>
+
+            <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
+              <h3 className="font-semibold text-sm mb-4">Points Breakdown</h3>
+              <div className="space-y-3">
+                {[
+                  { label: "Issues filed", pts: stats.totalIssues * 10, desc: `${stats.totalIssues} × 10 pts` },
+                  { label: "Issues resolved", pts: stats.resolved * 20, desc: `${stats.resolved} × 20 pts bonus` },
+                  { label: "Total earned", pts: points, desc: "Your current balance" },
+                ].map((row, i) => (
+                  <div key={i} className="flex justify-between items-center bg-white/5 rounded-xl px-4 py-3">
+                    <div>
+                      <p className="text-sm text-white">{row.label}</p>
+                      <p className="text-xs text-slate-400">{row.desc}</p>
+                    </div>
+                    <span className="text-fuchsia-300 text-sm font-semibold">{loading ? "—" : `+${row.pts}`}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
         </div>

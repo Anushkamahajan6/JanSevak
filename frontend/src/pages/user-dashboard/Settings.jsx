@@ -1,161 +1,95 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  ArrowLeft,
-  Bell,
-  Moon,
-  Shield,
-  Globe,
-  Save,
-} from "lucide-react";
+import { ArrowLeft, Bell, MapPin, LogOut } from "lucide-react";
+import { useUser } from "../../context/userContext";
 
 export default function Settings() {
   const navigate = useNavigate();
+  const { setUser } = useUser();
 
   const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
-  const [location, setLocation] = useState(true);
+  const [locationAccess, setLocationAccess] = useState(true);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("userSettings"));
-    if (saved) {
-      setNotifications(saved.notifications);
-      setDarkMode(saved.darkMode);
-      setLocation(saved.location);
-    }
+    const s = JSON.parse(localStorage.getItem("userSettings") || "{}");
+    if (s.notifications !== undefined) setNotifications(s.notifications);
+    if (s.locationAccess !== undefined) setLocationAccess(s.locationAccess);
   }, []);
 
-  useEffect(() => {
-    if (darkMode) {
-      document.body.classList.add("bg-slate-900");
-      document.body.classList.remove("bg-white");
-    } else {
-      document.body.classList.remove("bg-slate-900");
-      document.body.classList.add("bg-white");
-    }
-  }, [darkMode]);
+  const handleSave = () => {
+    localStorage.setItem("userSettings", JSON.stringify({ notifications, locationAccess }));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
 
-  const saveSettings = () => {
-    const data = {
-      notifications,
-      darkMode,
-      location,
-    };
-
-    localStorage.setItem("userSettings", JSON.stringify(data));
-    alert("Settings Saved Successfully ✅");
+  const handleLogout = async () => {
+    await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/auth/logout`, { method: "POST", credentials: "include" });
+    setUser(null);
+    navigate("/");
   };
 
   const Toggle = ({ value, onClick }) => (
     <button
       onClick={onClick}
-      className={`w-14 h-8 rounded-full transition ${
-        value
-          ? "bg-gradient-to-r from-violet-500 to-indigo-500"
-          : "bg-white/20"
-      }`}
+      className={`w-12 h-6 rounded-full transition-colors relative ${value ? "bg-gradient-to-r from-violet-500 to-indigo-500" : "bg-white/20"}`}
     >
-      <div
-        className={`w-6 h-6 bg-white rounded-full mt-1 transition ${
-          value ? "translate-x-7" : "translate-x-1"
-        }`}
-      ></div>
+      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${value ? "left-7" : "left-1"}`} />
     </button>
   );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 p-6 text-white">
-      <div className="max-w-4xl mx-auto">
-        <button
-          onClick={() => navigate("/user")}
-          className="flex items-center gap-2 text-slate-300 hover:text-violet-200 mb-4 transition"
-        >
-          <ArrowLeft size={18} />
-          Back to Dashboard
+      <div className="max-w-xl mx-auto">
+        <button onClick={() => navigate("/user")} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6 transition">
+          <ArrowLeft size={16} /> Back to Dashboard
         </button>
 
-        <div className="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/10 p-8">
-          <h1 className="text-3xl font-bold">Settings</h1>
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-7 space-y-6">
+          <div>
+            <h1 className="text-xl font-bold">Settings</h1>
+            <p className="text-slate-400 text-sm mt-1">Manage your preferences.</p>
+          </div>
 
-          <p className="text-slate-300 mt-2">
-            Manage your preferences and account settings.
-          </p>
-
-          <div className="mt-8 space-y-5">
-            {/* Notifications */}
-            <div className="flex items-center justify-between bg-white/10 border border-white/10 rounded-2xl p-5">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl p-4">
               <div className="flex items-center gap-3">
-                <Bell className="text-violet-200" />
+                <Bell size={16} className="text-slate-400" />
                 <div>
-                  <p className="font-medium">Notifications</p>
-                  <p className="text-sm text-slate-300">
-                    Receive issue updates and alerts
-                  </p>
+                  <p className="text-sm font-medium">Notifications</p>
+                  <p className="text-xs text-slate-400">Issue updates and alerts</p>
                 </div>
               </div>
-
-              <Toggle
-                value={notifications}
-                onClick={() => setNotifications(!notifications)}
-              />
+              <Toggle value={notifications} onClick={() => setNotifications(!notifications)} />
             </div>
 
-            {/* Dark Mode */}
-            <div className="flex items-center justify-between bg-white/10 border border-white/10 rounded-2xl p-5">
+            <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl p-4">
               <div className="flex items-center gap-3">
-                <Moon className="text-violet-200" />
+                <MapPin size={16} className="text-slate-400" />
                 <div>
-                  <p className="font-medium">Dark Mode</p>
-                  <p className="text-sm text-slate-300">
-                    Enable dark theme
-                  </p>
+                  <p className="text-sm font-medium">Location Access</p>
+                  <p className="text-xs text-slate-400">Required for issue reporting</p>
                 </div>
               </div>
-
-              <Toggle
-                value={darkMode}
-                onClick={() => setDarkMode(!darkMode)}
-              />
-            </div>
-
-            {/* Location */}
-            <div className="flex items-center justify-between bg-white/10 border border-white/10 rounded-2xl p-5">
-              <div className="flex items-center gap-3">
-                <Globe className="text-violet-200" />
-                <div>
-                  <p className="font-medium">Location Access</p>
-                  <p className="text-sm text-slate-300">
-                    Allow GPS for issue reporting
-                  </p>
-                </div>
-              </div>
-
-              <Toggle
-                value={location}
-                onClick={() => setLocation(!location)}
-              />
-            </div>
-
-            {/* Privacy */}
-            <div className="flex items-center gap-3 bg-white/10 border border-white/10 rounded-2xl p-5">
-              <Shield className="text-violet-200" />
-              <div>
-                <p className="font-medium">Privacy Policy</p>
-                <p className="text-sm text-slate-300">
-                  Read terms & privacy details
-                </p>
-              </div>
+              <Toggle value={locationAccess} onClick={() => setLocationAccess(!locationAccess)} />
             </div>
           </div>
 
-          {/* Save */}
           <button
-            onClick={saveSettings}
-            className="mt-8 w-full bg-gradient-to-r from-violet-500 to-indigo-500 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition hover:scale-[1.02]"
+            onClick={handleSave}
+            className={`w-full py-2.5 rounded-xl text-sm font-semibold transition ${saved ? "bg-emerald-500/80 text-white" : "bg-gradient-to-r from-violet-500 to-indigo-500 hover:opacity-90"}`}
           >
-            <Save size={18} />
-            Save Settings
+            {saved ? "Saved" : "Save Settings"}
           </button>
+
+          <div className="border-t border-white/10 pt-5">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-500/20 bg-red-500/10 text-red-300 text-sm font-medium hover:bg-red-500/20 transition"
+            >
+              <LogOut size={15} /> Logout
+            </button>
+          </div>
         </div>
       </div>
     </div>

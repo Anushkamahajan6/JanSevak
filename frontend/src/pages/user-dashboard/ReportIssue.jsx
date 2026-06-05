@@ -1,41 +1,29 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  ArrowLeft,
-  Upload,
-  MapPin,
-  Send,
-} from "lucide-react";
+import { ArrowLeft, Upload, MapPin, Send } from "lucide-react";
+
+const CATEGORIES = [
+  "Garbage & Waste",
+  "Road Damage",
+  "Water Leakage",
+  "Drainage & Sewage",
+  "Street Light",
+  "Stray Animals",
+  "Tree Fallen",
+  "Public Property Damage",
+  "Cleanliness",
+  "Waterlogging",
+  "Other",
+];
 
 export default function ReportIssue() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const [form, setForm] = useState({
-    title: "",
-    category: "",
-    description: "",
-    location: "",
-  });
-
   const [preview, setPreview] = useState(null);
+  const [form, setForm] = useState({ title: "", category: "", description: "", location: "" });
 
-  const categories = [
-    "Garbage",
-    "Road Damage",
-    "Water Leakage",
-    "Street Light",
-    "Drainage",
-    "Electricity",
-    "Cleanliness",
-    "Other",
-  ];
-
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setError("");
-  };
+  const handleChange = (e) => { setForm({ ...form, [e.target.name]: e.target.value }); setError(""); };
 
   const handleImage = (e) => {
     const file = e.target.files[0];
@@ -43,104 +31,44 @@ export default function ReportIssue() {
   };
 
   const getLocation = () => {
-    navigator.geolocation.getCurrentPosition((pos) => {
-      const lat = pos.coords.latitude.toFixed(5);
-      const lng = pos.coords.longitude.toFixed(5);
-
-      setForm({
-        ...form,
-        location: `${lat}, ${lng}`,
-      });
-    }, (err) => {
-      setError("Unable to get your location. Please enter it manually.");
-    });
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setForm({ ...form, location: `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}` }),
+      () => setError("Unable to get location. Enter manually.")
+    );
   };
 
-  const parseLocation = (locationStr) => {
-    if (!locationStr) return null;
-    
-    const parts = locationStr.split(',').map(p => p.trim());
+  const parseLocation = (str) => {
+    const parts = str.split(",").map(p => p.trim());
     if (parts.length === 2) {
-      const lat = parseFloat(parts[0]);
-      const lng = parseFloat(parts[1]);
-      
-      if (!isNaN(lat) && !isNaN(lng)) {
-        return {
-          type: 'Point',
-          coordinates: [lng, lat],
-          address: locationStr
-        };
-      }
+      const lat = parseFloat(parts[0]), lng = parseFloat(parts[1]);
+      if (!isNaN(lat) && !isNaN(lng)) return { type: "Point", coordinates: [lng, lat], address: str };
     }
-    
     return null;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
-    // Validation
-    if (!form.title.trim()) {
-      setError("Please enter an issue title");
-      return;
-    }
-
-    if (!form.category) {
-      setError("Please select a category");
-      return;
-    }
-
-    if (!form.description.trim()) {
-      setError("Please enter a description");
-      return;
-    }
-
-    if (!form.location.trim()) {
-      setError("Please provide a location");
-      return;
-    }
-
+    if (!form.title.trim()) { setError("Enter an issue title"); return; }
+    if (!form.category) { setError("Select a category"); return; }
+    if (!form.description.trim()) { setError("Enter a description"); return; }
+    if (!form.location.trim()) { setError("Provide a location"); return; }
     const location = parseLocation(form.location);
-    if (!location) {
-      setError("Invalid location format. Please use: latitude, longitude");
-      return;
-    }
+    if (!location) { setError("Invalid location format. Use: latitude, longitude"); return; }
 
     setLoading(true);
-
     try {
-      const apiBase = import.meta.env.VITE_API_BASE_URL;
-      const payload = {
-        title: form.title,
-        category: form.category,
-        description: form.description,
-        location: location,
-        severity: 3,
-        status: 'pending'
-      };
-
-      const res = await fetch(`${apiBase}/api/issues`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/issues`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ title: form.title, category: form.category, description: form.description, location, severity: 3, status: "pending" }),
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || 'Failed to submit issue');
-        return;
-      }
-
-      alert("Issue Submitted Successfully ✅");
+      if (!res.ok) { setError(data.error || "Failed to submit"); return; }
       navigate("/user/my-issues");
-    } catch (err) {
-      console.error('Error submitting issue:', err);
-      setError(err.message || 'Server error. Please try again.');
+    } catch {
+      setError("Server error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -148,152 +76,86 @@ export default function ReportIssue() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 p-6 text-white">
-      <div className="max-w-4xl mx-auto">
-        <button
-          onClick={() => navigate("/user")}
-          className="flex items-center gap-2 text-slate-300 hover:text-violet-200 mb-4 transition"
-        >
-          <ArrowLeft size={18} />
-          Back to Dashboard
+      <div className="max-w-2xl mx-auto">
+        <button onClick={() => navigate("/user")} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm mb-6 transition">
+          <ArrowLeft size={16} /> Back to Dashboard
         </button>
 
-        <div className="bg-white/10 backdrop-blur-xl rounded-3xl border border-white/10 p-8">
-          <h1 className="text-3xl font-bold">Report New Issue</h1>
-          <p className="text-slate-300 mt-2">
-            Help improve your community by reporting civic issues.
-          </p>
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-7">
+          <h1 className="text-xl font-bold mb-1">Report an Issue</h1>
+          <p className="text-slate-400 text-sm mb-6">Help your community by reporting a civic problem. You earn 10 points per report.</p>
 
           {error && (
-            <div className="mt-4 bg-red-500/20 border border-red-500/30 rounded-xl p-3 text-red-200 text-sm">
-              {error}
-            </div>
+            <div className="mb-5 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm">{error}</div>
           )}
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-6">
-            {/* Title */}
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-slate-200 mb-2">
-                Issue Title
-              </label>
-
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">Issue Title</label>
               <input
-                type="text"
-                name="title"
-                placeholder="e.g. Garbage overflow near gate"
-                value={form.title}
-                onChange={handleChange}
-                required
-                className="w-full bg-white/10 border border-white/10 text-white placeholder-slate-300 rounded-xl px-4 py-3 outline-none"
+                type="text" name="title" placeholder="e.g. Garbage overflow near main gate"
+                value={form.title} onChange={handleChange} required
+                className="w-full bg-white/5 border border-white/10 text-white placeholder-slate-500 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500/50 transition"
               />
             </div>
 
-            {/* Category */}
             <div>
-              <label className="block text-sm font-medium text-slate-200 mb-2">
-                Category
-              </label>
-
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">Category</label>
               <select
-                name="category"
-                value={form.category}
-                onChange={handleChange}
-                required
-                className="w-full bg-white/10 border border-white/10 text-white rounded-xl px-4 py-3 outline-none"
+                name="category" value={form.category} onChange={handleChange} required
+                className="w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500/50 transition"
               >
-                <option value="" className="text-black">
-                  Select category
-                </option>
-
-                {categories.map((item, i) => (
-                  <option key={i} className="text-black">
-                    {item}
-                  </option>
-                ))}
+                <option value="" className="bg-slate-900">Select category</option>
+                {CATEGORIES.map((c) => <option key={c} value={c} className="bg-slate-900">{c}</option>)}
               </select>
             </div>
 
-            {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-slate-200 mb-2">
-                Description
-              </label>
-
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">Description</label>
               <textarea
-                rows="4"
-                name="description"
-                placeholder="Describe the issue..."
-                value={form.description}
-                onChange={handleChange}
-                required
-                className="w-full bg-white/10 border border-white/10 text-white placeholder-slate-300 rounded-xl px-4 py-3 outline-none"
-              ></textarea>
+                rows={4} name="description" placeholder="Describe the issue in detail..."
+                value={form.description} onChange={handleChange} required
+                className="w-full bg-white/5 border border-white/10 text-white placeholder-slate-500 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500/50 transition resize-none"
+              />
             </div>
 
-            {/* Upload */}
             <div>
-              <label className="block text-sm font-medium text-slate-200 mb-2">
-                Upload Image
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">Photo (optional)</label>
+              <label className="border border-dashed border-white/15 rounded-xl p-5 flex flex-col items-center cursor-pointer hover:bg-white/5 transition">
+                <input type="file" accept="image/*" className="hidden" onChange={handleImage} />
+                <Upload size={20} className="text-slate-400 mb-2" />
+                <span className="text-xs text-slate-400">Click to upload image</span>
               </label>
-
-              <label className="border-2 border-dashed border-white/20 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-white/10 transition">
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImage}
-                />
-
-                <Upload className="text-violet-200" />
-                <span className="mt-2 text-sm text-slate-300">
-                  Click to upload image
-                </span>
-              </label>
-
-              {preview && (
-                <img
-                  src={preview}
-                  alt="preview"
-                  className="mt-4 w-40 h-32 object-cover rounded-xl border border-white/10"
-                />
-              )}
+              {preview && <img src={preview} alt="preview" className="mt-3 w-32 h-24 object-cover rounded-xl border border-white/10" />}
             </div>
 
-            {/* Location */}
             <div>
-              <label className="block text-sm font-medium text-slate-200 mb-2">
-                Location
-              </label>
-
-              <div className="flex gap-3">
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">Location (lat, lng)</label>
+              <div className="flex gap-2">
                 <input
-                  type="text"
-                  name="location"
-                  value={form.location}
-                  placeholder="Auto detect or type manually"
+                  type="text" name="location" value={form.location}
+                  placeholder="e.g. 28.61234, 77.20890"
                   onChange={handleChange}
-                  className="flex-1 bg-white/10 border border-white/10 text-white placeholder-slate-300 rounded-xl px-4 py-3 outline-none"
+                  className="flex-1 bg-white/5 border border-white/10 text-white placeholder-slate-500 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500/50 transition"
                 />
-
                 <button
-                  type="button"
-                  onClick={getLocation}
-                  className="px-4 rounded-xl bg-white/10 hover:bg-white/15 text-white transition"
+                  type="button" onClick={getLocation}
+                  className="px-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white transition"
+                  title="Auto-detect"
                 >
-                  <MapPin />
+                  <MapPin size={16} />
                 </button>
               </div>
+              <p className="text-xs text-slate-500 mt-1">Click the pin icon to auto-detect your location.</p>
             </div>
 
-            {/* Submit */}
             <button
-              type="submit"
-              disabled={loading}
-              className={`w-full bg-gradient-to-r from-violet-500 to-indigo-500 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition hover:scale-[1.02] ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              type="submit" disabled={loading}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition disabled:opacity-50"
             >
-              <Send size={18} />
-              {loading ? 'Submitting...' : 'Submit Issue'}
+              <Send size={16} /> {loading ? "Submitting..." : "Submit Issue"}
             </button>
-                 </form>
+          </form>
         </div>
       </div>
     </div>

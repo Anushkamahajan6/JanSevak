@@ -1,71 +1,58 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const Issue = require('../models/Issue');
+const User = require('../models/User');
 const router = express.Router();
 
-// Middleware to verify JWT token
 const verifyToken = (req, res, next) => {
   const cookieHeader = req.headers.cookie || '';
-  const tokenCookie = cookieHeader
-    .split(';')
-    .map((c) => c.trim())
-    .find((c) => c.startsWith('token='));
-  const token = tokenCookie ? tokenCookie.substring('token='.length) : null;
-
-  if (!token) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
+  const token = cookieHeader.split(';').map(c => c.trim()).find(c => c.startsWith('token='));
+  const tokenValue = token ? token.substring('token='.length) : null;
+  if (!tokenValue) return res.status(401).json({ error: 'Not authenticated' });
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    req.user = jwt.verify(tokenValue, process.env.JWT_SECRET);
     next();
-  } catch (err) {
+  } catch {
     return res.status(401).json({ error: 'Invalid token' });
   }
 };
 
-// User route
-router.get('/', (req, res) => {
-  res.send('User Dashboard');
+router.get('/', (req, res) => res.send('User Dashboard'));
+
+router.get('/profile', verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('name email role');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({ userId: user._id, name: user.name, email: user.email, role: user.role });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
-// Dashboard API - Get aggregated statistics
+router.patch('/profile', verifyToken, async (req, res) => {
+  try {
+    const { name, phone } = req.body;
+    const update = {};
+    if (name) update.name = name.trim();
+    if (phone !== undefined) update.phone = phone.trim();
+    const user = await User.findByIdAndUpdate(req.user.id, update, { new: true }).select('name email role');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({ userId: user._id, name: user.name, email: user.email, role: user.role });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 router.get('/dashboard', verifyToken, async (req, res) => {
   try {
-    const totalIssues = await Issue.countDocuments();
-    const resolved = await Issue.countDocuments({ status: 'resolved' });
-    const pending = await Issue.countDocuments({ status: 'pending' });
-
-    res.json({
-      totalIssues,
-      resolved,
-      pending
-    });
+    const userId = req.user.id;
+    const totalIssues = await Issue.countDocuments({ userId });
+    const resolved = await Issue.countDocuments({ userId, status: 'resolved' });
+    const pending = await Issue.countDocuments({ userId, status: 'pending' });
+    const inProgress = await Issue.countDocuments({ userId, status: 'in-progress' });
+    res.json({ totalIssues, resolved, pending, inProgress });
   } catch (err) {
-    console.error('Error fetching dashboard stats:', err);
-    res.status(500).json({ error: 'Failed to fetch dashboard statistics' });
-  }
-});
-
-// Profile route used by the frontend
-router.get('/profile', (req, res) => {
-  const cookieHeader = req.headers.cookie || '';
-  const tokenCookie = cookieHeader
-    .split(';')
-    .map((c) => c.trim())
-    .find((c) => c.startsWith('token='));
-  const token = tokenCookie ? tokenCookie.substring('token='.length) : null;
-
-  if (!token) {
-    return res.status(401).json({ message: 'Not authenticated' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    return res.json({ userId: decoded.id, role: decoded.role });
-  } catch (err) {
-    return res.status(401).json({ message: 'Invalid token' });
+    res.status(500).json({ error: 'Failed to fetch dashboard stats' });
   }
 });
 

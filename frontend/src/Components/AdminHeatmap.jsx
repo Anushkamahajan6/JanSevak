@@ -110,10 +110,10 @@ const AdminHeatmap = () => {
               'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 14, 3],
               'heatmap-color': [
                 'interpolate', ['linear'], ['heatmap-density'],
-                0,   'rgba(0,0,255,0)',
+                0, 'rgba(0,0,255,0)',
                 0.2, 'rgb(0,255,255)',
                 0.6, 'rgb(255,255,0)',
-                1,   'rgb(255,0,0)'
+                1, 'rgb(255,0,0)'
               ],
               'heatmap-radius': 50,
               'heatmap-opacity': 0.85,
@@ -128,10 +128,10 @@ const AdminHeatmap = () => {
             paint: {
               'circle-color': [
                 'match', ['get', 'status'],
-                'pending',     '#EF4444',
-                'open',        '#EF4444',
+                'pending', '#EF4444',
+                'open', '#EF4444',
                 'in-progress', '#FBBF24',
-                'resolved',    '#10B981',
+                'resolved', '#10B981',
                 '#EF4444'
               ],
               'circle-radius': 10,
@@ -185,10 +185,10 @@ const AdminHeatmap = () => {
 
   const statusBadge = (status) => {
     const colors = {
-      open:          'bg-red-500/20 text-red-400',
-      pending:       'bg-red-500/20 text-red-400',
+      open: 'bg-red-500/20 text-red-400',
+      pending: 'bg-red-500/20 text-red-400',
       'in-progress': 'bg-yellow-500/20 text-yellow-400',
-      resolved:      'bg-green-500/20 text-green-400',
+      resolved: 'bg-green-500/20 text-green-400',
     };
     return (
       <span className={`text-xs px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide ${colors[status] || 'bg-gray-500/20 text-gray-400'}`}>
@@ -231,7 +231,7 @@ const AdminHeatmap = () => {
               </h3>
               <p className="text-gray-400 text-xs mt-1">Click any pin to assign volunteers</p>
               <div className="mt-3 space-y-1.5">
-                {[['#EF4444','Open / Pending'],['#FBBF24','In Progress'],['#10B981','Resolved']].map(([color, label]) => (
+                {[['#EF4444', 'Open / Pending'], ['#FBBF24', 'In Progress'], ['#10B981', 'Resolved']].map(([color, label]) => (
                   <div key={label} className="flex items-center gap-2 text-xs text-gray-300">
                     <span className="h-3 w-3 rounded-full shrink-0 border border-white/30" style={{ background: color }} />
                     {label}

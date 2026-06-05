@@ -8,38 +8,21 @@ export const UserProvider = ({ children }) => {
 
   const fetchUser = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/user/profile", {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/user/profile`, {
         credentials: "include",
       });
-
-      if (!res.ok) {
-        // ❗ Don't instantly log out on 401 or 404
-        console.warn('Profile endpoint not available:', res.status);
-        setLoading(false);
-        return;
-      }
-
+      if (!res.ok) { setLoading(false); return; }
       const data = await res.json();
-
-      setUser({
-        id: data.userId,
-        role: data.role,
-      });
-
+      setUser({ id: data.userId, name: data.name, email: data.email, role: data.role });
     } catch (err) {
-      console.warn('Profile fetch error:', err.message);
+      console.warn("Profile fetch error:", err.message);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    // ⏳ small delay to allow cookie to be available
-    const timer = setTimeout(() => {
-      fetchUser();
-    }, 200);
-
-    return () => clearTimeout(timer);
+    fetchUser();
   }, []);
 
   return (
