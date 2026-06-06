@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import HeatmapView from '../../Components/heatmapview';
+import HeatmapView from '../../Components/HeatmapView';
 import { fetchAdminStats, fetchAdminIssues, fetchAdminVolunteers, updateIssueStatus, approveVolunteer } from '../../api/adminApi';
 import {
   Rocket, Flame, UserCheck, PawPrint, CheckCircle2,

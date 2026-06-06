@@ -19,7 +19,7 @@ import ReportIssue from "./pages/user-dashboard/ReportIssue";
 import Profile from "./pages/user-dashboard/Profile";
 import Rewards from "./pages/user-dashboard/Rewards";
 import UserSettings from "./pages/user-dashboard/Settings";
-import Heatmapview from "./Components/Heatmapview";
+import HeatmapView from "./Components/HeatmapView";
 
 function App() {
   return (
@@ -40,7 +40,7 @@ function App() {
         <Route path="/user/profile" element={<PrivateRoute requiredRole="user"><Profile /></PrivateRoute>} />
         <Route path="/user/rewards" element={<PrivateRoute requiredRole="user"><Rewards /></PrivateRoute>} />
         <Route path="/user/settings" element={<PrivateRoute requiredRole="user"><UserSettings /></PrivateRoute>} />
-        <Route path="/user/heatmap" element={<PrivateRoute requiredRole="user"><Heatmapview /></PrivateRoute>} />
+        <Route path="/user/heatmap" element={<PrivateRoute requiredRole="user"><HeatmapView /></PrivateRoute>} />
 
         <Route path="/admin" element={<PrivateRoute requiredRole="admin"><AdminLayout /></PrivateRoute>}>
           <Route index element={<AdminPage />} />
@@ -50,7 +50,7 @@ function App() {
           <Route path="heatmap" element={<AdminHeatmap />} />
         </Route>
 
-        <Route path="/heatmapView" element={<Heatmapview />} />
+        <Route path="/HeatmapView" element={<HeatmapView />} />
       </Routes>
     </BrowserRouter>
   );
