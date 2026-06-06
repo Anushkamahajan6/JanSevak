@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Map, ClipboardList, Trophy, Settings,
   LogOut, Bell, CheckCircle, AlertTriangle, ExternalLink
 } from "lucide-react";
-import HeatmapView from "../components/HeatmapView";
+import HeatmapView from "../Components/HeatmapView";
 import { useIssueNotifications } from "../hooks/useIssueNotifications";
 
 const DIRECT_CATEGORIES = [
