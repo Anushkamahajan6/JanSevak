@@ -3,12 +3,8 @@ const router = express.Router();
 const MessagingResponse = require("twilio").twiml.MessagingResponse;
 const Issue = require("../models/Issue");
 
-// In-memory state for WhatsApp conversation flow
 const userState = {};
 
-/**
- * Helper: Map user input (1, 2, 3) to issue category
- */
 function mapCategory(input) {
   const mapping = {
     "1": "Garbage",

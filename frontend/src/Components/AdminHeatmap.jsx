@@ -120,7 +120,6 @@ const AdminHeatmap = () => {
             },
           });
 
-          // ✅ NO minzoom — pins visible at ALL zoom levels
           map.addLayer({
             id: 'issues-pins',
             type: 'circle',
@@ -149,7 +148,6 @@ const AdminHeatmap = () => {
             map.getCanvas().style.cursor = '';
           });
 
-          // ✅ Click on pin → open panel
           map.on('click', 'issues-pins', (e) => {
             e.preventDefault();
             const feature = e.features[0];
@@ -157,7 +155,6 @@ const AdminHeatmap = () => {
             openPanel(feature.properties.id);
           });
 
-          // Click on empty space → close panel
           map.on('click', (e) => {
             const features = map.queryRenderedFeatures(e.point, { layers: ['issues-pins'] });
             if (features.length === 0) {

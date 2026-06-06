@@ -2,18 +2,26 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Upload, MapPin, Send } from "lucide-react";
 
-const CATEGORIES = [
+const DIRECT_CATEGORIES = [
   "Garbage & Waste",
   "Road Damage",
-  "Water Leakage",
-  "Drainage & Sewage",
-  "Street Light",
   "Stray Animals",
   "Tree Fallen",
   "Public Property Damage",
   "Cleanliness",
   "Waterlogging",
   "Other",
+];
+
+const ESCALATE_CATEGORIES = [
+  "Street Light Repair",
+  "Water Leakage",
+  "Drainage & Sewage",
+  "Pothole on Main Road",
+  "Broken Footpath",
+  "Encroachment",
+  "Noise Pollution",
+  "Air Pollution",
 ];
 
 export default function ReportIssue() {
@@ -46,6 +54,8 @@ export default function ReportIssue() {
     return null;
   };
 
+  const isEscalate = ESCALATE_CATEGORIES.includes(form.category);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -62,7 +72,15 @@ export default function ReportIssue() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ title: form.title, category: form.category, description: form.description, location, severity: 3, status: "pending" }),
+        body: JSON.stringify({
+          title: form.title,
+          category: form.category,
+          description: form.description,
+          location,
+          severity: 3,
+          status: "pending",
+          requiresAuthority: isEscalate,
+        }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Failed to submit"); return; }
@@ -83,7 +101,7 @@ export default function ReportIssue() {
 
         <div className="bg-white/5 border border-white/10 rounded-2xl p-7">
           <h1 className="text-xl font-bold mb-1">Report an Issue</h1>
-          <p className="text-slate-400 text-sm mb-6">Help your community by reporting a civic problem. You earn 10 points per report.</p>
+          <p className="text-slate-400 text-sm mb-6">Help your community. You earn 10 points per report.</p>
 
           {error && (
             <div className="mb-5 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm">{error}</div>
@@ -101,13 +119,48 @@ export default function ReportIssue() {
 
             <div>
               <label className="block text-xs font-medium text-slate-300 mb-1.5">Category</label>
-              <select
-                name="category" value={form.category} onChange={handleChange} required
-                className="w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500/50 transition"
-              >
-                <option value="" className="bg-slate-900">Select category</option>
-                {CATEGORIES.map((c) => <option key={c} value={c} className="bg-slate-900">{c}</option>)}
-              </select>
+
+              <div className="mb-2">
+                <p className="text-xs text-emerald-400 font-medium mb-1.5">Volunteer can resolve directly</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {DIRECT_CATEGORIES.map((c) => (
+                    <button
+                      key={c} type="button"
+                      onClick={() => setForm({ ...form, category: c })}
+                      className={`px-3 py-2 rounded-xl text-xs text-left border transition ${form.category === c
+                          ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-200"
+                          : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10"
+                        }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <p className="text-xs text-amber-400 font-medium mb-1.5">Requires authority / organisation</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {ESCALATE_CATEGORIES.map((c) => (
+                    <button
+                      key={c} type="button"
+                      onClick={() => setForm({ ...form, category: c })}
+                      className={`px-3 py-2 rounded-xl text-xs text-left border transition ${form.category === c
+                          ? "bg-amber-500/20 border-amber-500/40 text-amber-200"
+                          : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10"
+                        }`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {isEscalate && (
+                <div className="mt-3 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+                  This issue will be escalated to the relevant authority. Volunteers will assist in following up.
+                </div>
+              )}
             </div>
 
             <div>
@@ -141,12 +194,11 @@ export default function ReportIssue() {
                 <button
                   type="button" onClick={getLocation}
                   className="px-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white transition"
-                  title="Auto-detect"
                 >
                   <MapPin size={16} />
                 </button>
               </div>
-              <p className="text-xs text-slate-500 mt-1">Click the pin icon to auto-detect your location.</p>
+              <p className="text-xs text-slate-500 mt-1">Click the pin to auto-detect your location.</p>
             </div>
 
             <button

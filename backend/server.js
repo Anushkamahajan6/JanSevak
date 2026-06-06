@@ -14,7 +14,7 @@ const twilioRoutes = require('./routes/twilioRoutes');
 const heatmapRoutes = require('./routes/heatmap');
 const issueRoutes = require('./routes/issueRoutes');
 const userRoutes = require('./routes/userRoutes');
-const adminRoutes = require('./routes/adminRoutes'); // ✅ NEW
+const adminRoutes = require('./routes/adminRoutes'); 
 const { initSocket } = require('./Sockets/VolunteerSocket');
 
 dotenv.config();
@@ -29,10 +29,8 @@ const io = socketIO(server, {
   }
 });
 
-// Initialize Socket.io handlers
 initSocket(io);
 
-// Make io available to routes via middleware
 app.use((req, res, next) => {
   req.io = io;
   next();
@@ -52,7 +50,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/volunteer', volunteerRoutes);
 app.use('/api/issues', issueRoutes);
-app.use('/api/admin', adminRoutes); // ✅ NEW
+app.use('/api/admin', adminRoutes); 
 app.use('/api', heatmapRoutes);
 
 server.listen(PORT, () => {

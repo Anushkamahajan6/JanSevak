@@ -1,11 +1,7 @@
-// src/api/volunteerApi.js
-const BASE = 'http://localhost:5000/api/volunteer';
+const BASE = `${import.meta.env.VITE_API_BASE_URL}/api/volunteer`;
 
 async function apiFetch(path, options = {}) {
-  const res = await fetch(`${BASE}${path}`, {
-    credentials: 'include',
-    ...options,
-  });
+  const res = await fetch(`${BASE}${path}`, { credentials: 'include', ...options });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error || `Request failed (${res.status})`);

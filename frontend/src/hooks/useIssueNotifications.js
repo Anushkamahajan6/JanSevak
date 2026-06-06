@@ -1,123 +1,110 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 
-/**
- * Hook for listening to real-time issue notifications via Socket.io
- * Automatically plays a sound and shows a toast when new issues are created
- */
-export const useIssueNotifications = (onNewIssue) => {
-  const [socket, setSocket] = useState(null);
-  const [isConnected, setIsConnected] = useState(false);
+let sharedSocket = null;
 
-  // Connect once on mount
-  useEffect(() => {
-    // Connect to Socket.io server
-    const socketInstance = io(import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000', {
+function getSocket() {
+  if (!sharedSocket) {
+    sharedSocket = io(import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000', {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      reconnectionAttempts: 5
+      reconnectionAttempts: 10,
     });
+  }
+  return sharedSocket;
+}
 
-    socketInstance.on('connect', () => {
-      console.log('✅ Connected to notifications');
-      setIsConnected(true);
-    });
+export const useIssueNotifications = ({ onNewIssue, onTaskAssigned, onStatusUpdated, volunteer, isActive } = {}) => {
+  const [isConnected, setIsConnected] = useState(false);
 
-    socketInstance.on('disconnect', () => {
-      console.log('❌ Disconnected from notifications');
-      setIsConnected(false);
-    });
-
-    setSocket(socketInstance);
-
-    return () => {
-      socketInstance.disconnect();
-    };
-  }, []); // Empty dependency array - connect only once
-
-  // Update listener when onNewIssue changes
   useEffect(() => {
-    if (!socket) return;
+    const socket = getSocket();
 
-    socket.off('new_issue_created'); // Remove old listener to prevent duplicates
-    socket.on('new_issue_created', (data) => {
-      console.log('🔔 New issue notification received:', data);
-      
-      // Play notification sound
-      playNotificationSound();
-      
-      // Call the callback with the new issue data if provided
-      if (onNewIssue) {
-        onNewIssue(data);
+    const onConnect = () => {
+      setIsConnected(true);
+      // Register volunteer as active with location if available
+      if (volunteer?._id && isActive) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            socket.emit('volunteer:go_active', {
+              userId: volunteer._id,
+              name: volunteer.name,
+              coordinates: [pos.coords.longitude, pos.coords.latitude],
+            });
+          },
+          () => {
+            // No location — still register but without coords
+            socket.emit('volunteer:go_active', {
+              userId: volunteer._id,
+              name: volunteer.name,
+              coordinates: [77.5092, 28.4621], // fallback
+            });
+          }
+        );
       }
-    });
+    };
+
+    const onDisconnect = () => setIsConnected(false);
+
+    socket.on('connect', onConnect);
+    socket.on('disconnect', onDisconnect);
+    if (socket.connected) setIsConnected(true);
 
     return () => {
-      socket.off('new_issue_created');
+      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
     };
-  }, [socket, onNewIssue]); // Update listener when callback changes
+  }, [volunteer, isActive]);
 
-  return { socket, isConnected };
+  // new_issue_created
+  useEffect(() => {
+    if (!onNewIssue) return;
+    const socket = getSocket();
+    const handler = (data) => { playNotificationSound(); onNewIssue(data); };
+    socket.on('new_issue_created', handler);
+    return () => socket.off('new_issue_created', handler);
+  }, [onNewIssue]);
+
+  // task_assigned — volunteer gets notified admin approved them
+  useEffect(() => {
+    if (!onTaskAssigned || !volunteer?._id) return;
+    const socket = getSocket();
+    const handler = (data) => {
+      if (data.volunteerId?.toString() === volunteer._id?.toString()) {
+        playNotificationSound();
+        onTaskAssigned(data);
+      }
+    };
+    socket.on('task_assigned', handler);
+    return () => socket.off('task_assigned', handler);
+  }, [onTaskAssigned, volunteer]);
+
+  // issue_status_updated — refresh heatmap / task list
+  useEffect(() => {
+    if (!onStatusUpdated) return;
+    const socket = getSocket();
+    socket.on('issue_status_updated', onStatusUpdated);
+    return () => socket.off('issue_status_updated', onStatusUpdated);
+  }, [onStatusUpdated]);
+
+  return { isConnected };
 };
 
-/**
- * Play a notification sound
- * Uses Web Audio API to generate an emergency alert-style notification
- * This provides audio feedback when a new issue is reported
- */
 export const playNotificationSound = () => {
   try {
-    // Create audio context
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    
-    // Create a pulsing alert tone with frequency sweep
-    const now = audioContext.currentTime;
-    
-    // Main alert tone with sawtooth wave (louder than sine)
-    {
-      const osc = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-      
-      osc.connect(gain);
-      gain.connect(audioContext.destination);
-      
-      osc.type = 'sawtooth'; // Sawtooth = very loud, rich harmonics
-      
-      // Frequency sweep: 1200 Hz → 400 Hz (create alarm effect)
-      osc.frequency.setValueAtTime(1200, now);
-      osc.frequency.exponentialRampToValueAtTime(400, now + 0.4);
-      
-      // Volume envelope
-      gain.gain.setValueAtTime(0.9, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-      
-      osc.start(now);
-      osc.stop(now + 0.4);
-    }
-    
-    // Secondary pulse for extra emphasis
-    {
-      const osc2 = audioContext.createOscillator();
-      const gain2 = audioContext.createGain();
-      
-      osc2.connect(gain2);
-      gain2.connect(audioContext.destination);
-      
-      osc2.type = 'triangle'; // Triangle = bright and clear
-      osc2.frequency.value = 2000;
-      
-      // Short sharp pulse at the end
-      gain2.gain.setValueAtTime(0, now + 0.35);
-      gain2.gain.setValueAtTime(0.8, now + 0.35);
-      gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
-      
-      osc2.start(now + 0.35);
-      osc2.stop(now + 0.6);
-    }
-    
-    console.log('🔊 Alert tone played!');
-  } catch (err) {
-    console.error('Error playing notification sound:', err);
-  }
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, now);
+    osc.frequency.exponentialRampToValueAtTime(440, now + 0.3);
+    gain.gain.setValueAtTime(0.6, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+    osc.start(now);
+    osc.stop(now + 0.4);
+  } catch (_) {}
 };

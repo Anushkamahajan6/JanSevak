@@ -1,207 +1,255 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../context/userContext";
+import {
+  LayoutDashboard, Map, ClipboardList, Trophy, Settings,
+  LogOut, Bell, CheckCircle, AlertTriangle, ExternalLink
+} from "lucide-react";
 import HeatmapView from "../components/HeatmapView";
-import { updateVolunteerStatus } from "../api/volunteerApi";
 import { useIssueNotifications } from "../hooks/useIssueNotifications";
+
+const DIRECT_CATEGORIES = [
+  "Garbage & Waste", "Road Damage", "Stray Animals", "Tree Fallen",
+  "Public Property Damage", "Cleanliness", "Waterlogging", "Other",
+];
 
 export default function VolunteerPage() {
   const navigate = useNavigate();
-  const { user, loading: userLoading } = useUser();
+  const { user, setUser, loading: userLoading } = useUser();
 
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(true);
   const [isRegistered, setIsRegistered] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [volunteer, setVolunteer] = useState(null);
   const [isActive, setIsActive] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
+
+  const [allTasks, setAllTasks] = useState([]);
+  const [tasksLoading, setTasksLoading] = useState(true);
+
   const [notification, setNotification] = useState(null);
-  const [notificationTimeout, setNotificationTimeout] = useState(null);
+  const [statusLoading, setStatusLoading] = useState(false);
 
+  // Profile setup form
   const [formData, setFormData] = useState({ name: "", type: "Individual", ngoName: "" });
+  const [formError, setFormError] = useState("");
 
+  const apiBase = import.meta.env.VITE_API_BASE_URL;
   const hasMapboxToken = Boolean(import.meta.env.VITE_MAPBOX_TOKEN);
 
-  // Redirect if not logged in as volunteer
+  // Redirect if not volunteer
   useEffect(() => {
-    if (!userLoading) {
-      if (!user) {
-        navigate("/login?role=volunteer");
-      } else if (user.role !== "volunteer") {
-        navigate("/login?role=volunteer");
-      }
+    if (!userLoading && (!user || user.role !== "volunteer")) {
+      navigate("/login?role=volunteer");
     }
-  }, [user, userLoading, navigate]);
+  }, [user, userLoading]);
 
-  // Check if volunteer profile already exists
+  // Fetch volunteer profile
   useEffect(() => {
     if (!user || user.role !== "volunteer") return;
-
-    const fetchProfile = async () => {
-      try {
-        const res = await fetch("http://localhost:5000/api/volunteer/profile", {
-          credentials: "include",
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.volunteer) {
-            setCurrentUser(data.volunteer);
-            setIsRegistered(true);
-            setIsActive(Boolean(data.volunteer.isActive));
-          }
+    fetch(`${apiBase}/api/volunteer/profile`, { credentials: "include" })
+      .then(r => r.json())
+      .then(d => {
+        if (d.volunteer) {
+          setVolunteer(d.volunteer);
+          setIsRegistered(true);
+          setIsActive(Boolean(d.volunteer.isActive));
         }
-      } catch (err) {
-        console.error("Error fetching volunteer profile:", err);
-      } finally {
-        setProfileLoading(false);
-      }
-    };
-
-    fetchProfile();
+      })
+      .catch(console.error)
+      .finally(() => setProfileLoading(false));
   }, [user]);
 
   // Fetch tasks once registered
   useEffect(() => {
     if (!isRegistered) return;
-    const fetchTasks = async () => {
-      try {
-        const res = await fetch("http://localhost:5000/api/volunteer/tasks", {
-          credentials: "include",
-        });
-        const data = await res.json();
-        setTasks(data.tasks || []);
-      } catch (err) {
-        console.error("Error fetching tasks:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTasks();
+    fetch(`${apiBase}/api/volunteer/tasks`, { credentials: "include" })
+      .then(r => r.json())
+      .then(d => setAllTasks(d.tasks || []))
+      .catch(console.error)
+      .finally(() => setTasksLoading(false));
   }, [isRegistered]);
 
-  const handleNewIssue = (issueData) => {
-    setNotification({
-      title: issueData.title || issueData.category,
-      message: `New ${issueData.category} issue reported`,
-      data: issueData,
+  // Socket notifications
+  const handleNewIssue = useCallback((data) => {
+    setNotification({ title: data.title || data.category, message: `New ${data.category} issue reported` });
+    setTimeout(() => setNotification(null), 6000);
+    // Append new task to list immediately
+    setAllTasks(prev => {
+      const exists = prev.some(t => t.reportId?.toString() === data.issueId?.toString());
+      if (exists) return prev;
+      return [{
+        reportId: data.issueId,
+        category: data.category,
+        description: data.description || '',
+        address: data.location?.address || 'Location on map',
+        severity: data.severity,
+        pointsReward: (data.severity || 3) * 20,
+      }, ...prev];
     });
-    if (notificationTimeout) clearTimeout(notificationTimeout);
-    const t = setTimeout(() => setNotification(null), 8000);
-    setNotificationTimeout(t);
-  };
+  }, []);
 
-  useIssueNotifications(isActive ? handleNewIssue : null);
+  const handleTaskAssigned = useCallback((data) => {
+    setNotification({ title: 'Task Assigned', message: data.message });
+    setTimeout(() => setNotification(null), 8000);
+  }, []);
+
+  useIssueNotifications({
+    onNewIssue: isActive ? handleNewIssue : null,
+    onTaskAssigned: handleTaskAssigned,
+    volunteer,
+    isActive,
+  });
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    setFormError("");
     try {
-      const res = await fetch("http://localhost:5000/api/volunteer/profile", {
+      const res = await fetch(`${apiBase}/api/volunteer/profile`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(formData),
       });
       const data = await res.json();
-      if (res.ok) {
-        setCurrentUser(data.volunteer || null);
-        setIsRegistered(true);
-        setIsActive(Boolean(data.volunteer?.isActive));
-      } else {
-        alert(data.error || "Profile setup failed");
-      }
-    } catch (err) {
-      alert("Server error");
+      if (!res.ok) { setFormError(data.error || "Profile setup failed"); return; }
+      setVolunteer(data.volunteer);
+      setIsRegistered(true);
+      setIsActive(false);
+    } catch {
+      setFormError("Server error. Try again.");
     }
   };
 
   const handleApply = async (taskId) => {
     try {
-      const res = await fetch("http://localhost:5000/api/volunteer/apply", {
+      const res = await fetch(`${apiBase}/api/volunteer/apply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ volunteerId: currentUser?._id, taskId }),
+        body: JSON.stringify({ volunteerId: volunteer?._id, taskId }),
       });
       const data = await res.json();
       alert(data.message || "Applied successfully");
-    } catch (err) {
+    } catch {
       alert("Server error");
     }
   };
 
-  const toggleVolunteerStatus = async () => {
+  const handleEscalate = (task) => {
+    const subject = encodeURIComponent(`Civic Issue: ${task.category}`);
+    const body = encodeURIComponent(
+      `Issue: ${task.category}\nDescription: ${task.description}\nLocation: ${task.address}\n\nThis issue has been reported by citizens and requires authority attention.`
+    );
+    window.open(`mailto:authority@example.com?subject=${subject}&body=${body}`, "_blank");
+  };
+
+  const toggleStatus = async () => {
+    setStatusLoading(true);
     try {
-      const data = await updateVolunteerStatus(currentUser?._id, !isActive);
-      setIsActive(!isActive);
-      alert(data.message || "Status updated");
+      const res = await fetch(`${apiBase}/api/volunteer/active`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ isActive: !isActive }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setIsActive(!isActive);
+        setVolunteer(data.volunteer);
+      }
     } catch (err) {
-      alert(err.message || "Failed to update status");
+      console.error(err);
+    } finally {
+      setStatusLoading(false);
     }
   };
 
-  // Loading states
+  const handleLogout = async () => {
+    await fetch(`${apiBase}/api/auth/logout`, { method: "POST", credentials: "include" });
+    setUser(null);
+    navigate("/");
+  };
+
+  // Split tasks
+  const directTasks = allTasks.filter(t => DIRECT_CATEGORIES.includes(t.category));
+  const escalateTasks = allTasks.filter(t => !DIRECT_CATEGORIES.includes(t.category));
+
+  const initials = volunteer?.name
+    ? volunteer.name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)
+    : user?.name?.charAt(0)?.toUpperCase() || "V";
+
+  const navItems = [
+    { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { key: "heatmap", label: "Heatmap", icon: Map },
+    { key: "tasks", label: "Tasks", icon: ClipboardList },
+    { key: "rewards", label: "Rewards", icon: Trophy },
+    { key: "settings", label: "Settings", icon: Settings },
+  ];
+
+  // Loading
   if (userLoading || profileLoading) {
     return (
-      <div style={styles.loadingPage}>
-        <div style={styles.loader} />
-        <p style={{ marginTop: "16px", color: "#fff", fontSize: "14px" }}>Loading...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-slate-400 text-sm">Loading...</p>
+        </div>
       </div>
     );
   }
 
-  // Profile setup (first time only)
+  // Profile setup (first time)
   if (!isRegistered) {
     return (
-      <div style={styles.bg}>
-        <div style={styles.overlay} />
-        <div style={styles.centerWrap}>
-          <div style={styles.glassCard}>
-            <h1 style={styles.title}>Complete Your Profile</h1>
-            <p style={styles.subtitle}>This is a one-time setup to get you started as a volunteer.</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 flex items-center justify-center p-6">
+        <div className="w-full max-w-md bg-white/5 border border-white/10 rounded-2xl p-8 text-white">
+          <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center font-bold text-sm mb-5">J</div>
+          <h1 className="text-xl font-bold mb-1">Complete Your Profile</h1>
+          <p className="text-slate-400 text-sm mb-6">One-time setup to get you started as a volunteer.</p>
 
-            <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+          {formError && (
+            <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm">{formError}</div>
+          )}
+
+          <form onSubmit={handleRegister} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">Full Name</label>
+              <input
+                required type="text" placeholder="Your full name"
+                value={formData.name}
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                className="w-full bg-white/5 border border-white/10 text-white placeholder-slate-500 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500/50 transition"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">Volunteer Type</label>
+              <select
+                value={formData.type}
+                onChange={e => setFormData({ ...formData, type: e.target.value })}
+                className="w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500/50 transition"
+              >
+                <option value="Individual" className="bg-slate-900">Individual Citizen</option>
+                <option value="NGO_Affiliated" className="bg-slate-900">NGO Affiliated</option>
+              </select>
+            </div>
+            {formData.type === "NGO_Affiliated" && (
               <div>
-                <label style={styles.label}>Full Name</label>
+                <label className="block text-xs font-medium text-slate-300 mb-1.5">NGO Name</label>
                 <input
-                  required
-                  type="text"
-                  placeholder="Enter your full name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  style={styles.input}
+                  required type="text" placeholder="Organisation name"
+                  value={formData.ngoName}
+                  onChange={e => setFormData({ ...formData, ngoName: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 text-white placeholder-slate-500 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-indigo-500/50 transition"
                 />
               </div>
-
-              <div>
-                <label style={styles.label}>Volunteer Type</label>
-                <select
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  style={styles.input}
-                >
-                  <option value="Individual">Individual Citizen</option>
-                  <option value="NGO_Affiliated">NGO Affiliated</option>
-                </select>
-              </div>
-
-              {formData.type === "NGO_Affiliated" && (
-                <div>
-                  <label style={styles.label}>NGO Name</label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="Enter NGO Name"
-                    value={formData.ngoName}
-                    onChange={(e) => setFormData({ ...formData, ngoName: e.target.value })}
-                    style={styles.input}
-                  />
-                </div>
-              )}
-
-              <button type="submit" style={styles.btn}>Save and Continue</button>
-            </form>
-          </div>
+            )}
+            <button
+              type="submit"
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 text-sm font-semibold hover:opacity-90 transition mt-2"
+            >
+              Save and Continue
+            </button>
+          </form>
         </div>
       </div>
     );
@@ -209,178 +257,402 @@ export default function VolunteerPage() {
 
   // Dashboard
   return (
-    <div style={styles.bg}>
-      <div style={styles.overlay} />
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 flex text-white">
 
+      {/* Notification toast */}
       {notification && (
-        <div style={{
-          position: "fixed", top: "20px", right: "20px", zIndex: 9999,
-          background: "linear-gradient(135deg,#ef4444,#dc2626)", color: "#fff",
-          padding: "16px 24px", borderRadius: "12px",
-          boxShadow: "0 10px 40px rgba(239,68,68,0.4)",
-          fontSize: "14px", fontWeight: "600",
-          display: "flex", flexDirection: "column", gap: "8px", maxWidth: "320px",
-        }}>
-          <div style={{ fontSize: "16px", fontWeight: "700" }}>{notification.title}</div>
-          <div style={{ fontSize: "13px", opacity: 0.9 }}>{notification.message}</div>
+        <div className="fixed top-5 right-5 z-50 bg-red-500 text-white px-5 py-4 rounded-2xl shadow-xl max-w-xs">
+          <p className="font-semibold text-sm">{notification.title}</p>
+          <p className="text-xs opacity-90 mt-1">{notification.message}</p>
         </div>
       )}
 
-      <div style={styles.dashboard}>
-        {/* Sidebar */}
-        <div style={styles.sidebar}>
-          <div>
-            <div style={styles.brandBox}>
-              <div style={styles.iconCircleSmall}>J</div>
-              <div>
-                <div style={styles.brandTitle}>JanSevak</div>
-                <div style={styles.brandSub}>Volunteer Hub</div>
-              </div>
-            </div>
-            {[
-              { key: "dashboard", label: "Dashboard" },
-              { key: "heatmap", label: "Heatmap" },
-              { key: "tasks", label: "Tasks" },
-            ].map((item) => (
-              <div
+      {/* Sidebar */}
+      <aside className="w-64 bg-white/5 border-r border-white/10 flex flex-col flex-shrink-0">
+        <div className="p-6 border-b border-white/10">
+          <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center font-bold text-sm">J</div>
+          <h1 className="mt-3 font-bold text-lg">JanSevak</h1>
+          <p className="text-xs text-slate-400">Volunteer Hub</p>
+        </div>
+
+        <nav className="p-4 space-y-1 flex-1">
+          {navItems.map(item => {
+            const Icon = item.icon;
+            return (
+              <button
                 key={item.key}
                 onClick={() => setActiveTab(item.key)}
-                style={activeTab === item.key ? styles.menuActive : styles.menu}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition ${activeTab === item.key
+                    ? "bg-white/15 text-white font-medium"
+                    : "text-slate-400 hover:bg-white/10 hover:text-white"
+                  }`}
               >
-                {item.label}
-              </div>
-            ))}
-            <div style={styles.menu}>Rewards</div>
-            <div style={styles.menu}>Settings</div>
-          </div>
-
-          <div style={styles.profileMini}>
-            <div style={styles.avatar}>{currentUser?.name?.charAt(0)?.toUpperCase()}</div>
-            <div>
-              <div style={{ fontWeight: "600", fontSize: "14px" }}>{currentUser?.name}</div>
-              <div style={{ fontSize: "12px", opacity: 0.7 }}>{isActive ? "Active" : "Inactive"}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main */}
-        <div style={styles.main}>
-          <div style={styles.topbar}>
-            <div>
-              <h2 style={{ margin: 0, color: "#fff", fontSize: "18px" }}>Welcome, {currentUser?.name}</h2>
-              <p style={{ margin: "4px 0 0", color: "#94a3b8", fontSize: "13px" }}>
-                {currentUser?.type === "NGO_Affiliated" ? `Representing ${currentUser?.ngoName}` : "Individual Volunteer"}
-              </p>
-            </div>
-            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-              <button
-                onClick={toggleVolunteerStatus}
-                style={{
-                  ...styles.statusBtn,
-                  background: isActive ? "linear-gradient(135deg,#10b981,#059669)" : "linear-gradient(135deg,#6b7280,#4b5563)",
-                }}
-              >
-                {isActive ? "Active" : "Inactive"}
+                <Icon size={16} /> {item.label}
               </button>
-              <div style={styles.pointsBox}>{currentUser?.points || 0} pts</div>
+            );
+          })}
+        </nav>
+
+        <div className="p-4 border-t border-white/10 space-y-2">
+          <div className="flex gap-3 items-center">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 flex items-center justify-center text-xs font-bold flex-shrink-0">
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-sm truncate">{volunteer?.name || "—"}</p>
+              <p className="text-xs text-slate-400">{isActive ? "Active" : "Inactive"}</p>
             </div>
           </div>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-slate-400 hover:bg-white/10 hover:text-white transition"
+          >
+            <LogOut size={14} /> Logout
+          </button>
+        </div>
+      </aside>
 
-          <div style={styles.statsGrid}>
+      {/* Main */}
+      <main className="flex-1 overflow-auto">
+        {/* Topbar */}
+        <header className="bg-white/5 border-b border-white/10 px-6 py-4 flex justify-between items-center">
+          <div>
+            <h2 className="text-lg font-bold">Welcome, {volunteer?.name?.split(" ")[0] || "—"}</h2>
+            <p className="text-xs text-slate-400">
+              {volunteer?.type === "NGO_Affiliated" ? `Representing ${volunteer?.ngoName}` : "Individual Volunteer"}
+            </p>
+          </div>
+          <div className="flex gap-3 items-center">
+            <button className="w-9 h-9 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center hover:bg-white/15 transition">
+              <Bell size={16} />
+            </button>
+            <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500/20 to-indigo-500/20 border border-violet-500/20 text-sm font-semibold">
+              {volunteer?.points || 0} pts
+            </div>
+            <button
+              onClick={toggleStatus}
+              disabled={statusLoading}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition disabled:opacity-50 border ${isActive
+                  ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25"
+                  : "bg-white/10 border-white/10 text-slate-300 hover:bg-white/15"
+                }`}
+            >
+              {isActive ? "Active" : "Go Active"}
+            </button>
+          </div>
+        </header>
+
+        <div className="p-6 space-y-6">
+
+          {/* Stats — always visible */}
+          <section className="grid grid-cols-3 gap-4">
             {[
-              { label: "Nearby Tasks", value: tasks.length },
-              { label: "Total Points", value: currentUser?.points || 0 },
-              { label: "Status", value: isActive ? "Live" : "Paused" },
+              { label: "Direct Tasks", value: tasksLoading ? "—" : directTasks.length, sub: "Volunteer can resolve" },
+              { label: "Escalate Tasks", value: tasksLoading ? "—" : escalateTasks.length, sub: "Needs authority" },
+              { label: "Points Earned", value: volunteer?.points || 0, sub: "Completed tasks" },
             ].map((s, i) => (
-              <div key={i} style={styles.statGlass}>
-                <h3 style={{ margin: "0 0 6px", fontSize: "28px" }}>{s.value}</h3>
-                <p style={{ margin: 0, color: "#94a3b8", fontSize: "13px" }}>{s.label}</p>
+              <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                <h3 className="text-3xl font-bold">{s.value}</h3>
+                <p className="text-sm text-slate-300 mt-1">{s.label}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{s.sub}</p>
               </div>
             ))}
-          </div>
+          </section>
 
-          {(activeTab === "dashboard" || activeTab === "heatmap") && (
-            <div style={styles.sectionGlass}>
-              <h3 style={styles.sectionHeading}>Live Issue Heatmap</h3>
-              <div style={{ borderRadius: "14px", overflow: "hidden" }}>
-                {hasMapboxToken ? <HeatmapView /> : (
-                  <div style={{ padding: "30px", textAlign: "center", color: "#64748b" }}>
-                    Map token not configured
-                  </div>
-                )}
-              </div>
+          {/* Dashboard tab */}
+          {activeTab === "dashboard" && (
+            <>
+              {hasMapboxToken && (
+                <section className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                  <h3 className="font-semibold text-sm mb-4">Live Issue Heatmap</h3>
+                  <div className="rounded-xl overflow-hidden"><HeatmapView volunteer={volunteer} /></div>
+                </section>
+              )}
+
+              <TaskSection
+                title="Direct Action Tasks"
+                subtitle="Volunteer can resolve without authority"
+                tasks={directTasks.slice(0, 3)}
+                loading={tasksLoading}
+                type="direct"
+                onApply={handleApply}
+                onEscalate={handleEscalate}
+                onSeeAll={() => setActiveTab("tasks")}
+              />
+            </>
+          )}
+
+          {/* Heatmap tab */}
+          {activeTab === "heatmap" && (
+            <section className="bg-white/5 border border-white/10 rounded-2xl p-5">
+              <h3 className="font-semibold text-sm mb-4">Live Issue Heatmap</h3>
+              {hasMapboxToken
+                ? <div className="rounded-xl overflow-hidden"><HeatmapView /></div>
+                : <p className="text-slate-500 text-sm text-center py-10">Map token not configured. Add VITE_MAPBOX_TOKEN to your .env</p>
+              }
+            </section>
+          )}
+
+          {/* Tasks tab */}
+          {activeTab === "tasks" && (
+            <div className="space-y-6">
+              <TaskSection
+                title="Direct Action Tasks"
+                subtitle="You can resolve these yourself — clean up, remove, fix"
+                tasks={directTasks}
+                loading={tasksLoading}
+                type="direct"
+                onApply={handleApply}
+                onEscalate={handleEscalate}
+              />
+              <TaskSection
+                title="Authority Escalation Tasks"
+                subtitle="These require govt / organisation intervention — follow up and raise complaint"
+                tasks={escalateTasks}
+                loading={tasksLoading}
+                type="escalate"
+                onApply={handleApply}
+                onEscalate={handleEscalate}
+              />
             </div>
           )}
 
-          {(activeTab === "dashboard" || activeTab === "tasks") && (
-            <div style={styles.sectionGlass}>
-              <h3 style={styles.sectionHeading}>Nearby Tasks</h3>
-              {loading ? (
-                <p style={{ color: "#64748b", fontSize: "14px" }}>Loading tasks...</p>
-              ) : tasks.length > 0 ? (
-                <div style={styles.taskGrid}>
-                  {tasks.map((task, i) => (
-                    <div key={i} style={styles.taskCard}>
-                      <div style={styles.taskTop}>
-                        <h4 style={{ margin: 0, fontSize: "15px" }}>{task.category}</h4>
-                        <span style={styles.reward}>+{task.pointsReward} pts</span>
-                      </div>
-                      <p style={styles.taskDesc}>{task.description}</p>
-                      <div style={styles.taskBottom}>
-                        <span style={{ fontSize: "13px", color: "#94a3b8" }}>{task.address}</span>
-                        <button onClick={() => handleApply(task.reportId)} style={styles.btnSmall}>
-                          Help Now
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p style={{ color: "#64748b", fontSize: "14px" }}>No tasks available at the moment.</p>
-              )}
-            </div>
+          {/* Rewards tab */}
+          {activeTab === "rewards" && (
+            <RewardsTab volunteer={volunteer} directTasks={directTasks} escalateTasks={escalateTasks} />
+          )}
+
+          {/* Settings tab */}
+          {activeTab === "settings" && (
+            <SettingsTab volunteer={volunteer} setVolunteer={setVolunteer} apiBase={apiBase} handleLogout={handleLogout} />
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }
 
-const styles = {
-  bg: { minHeight: "100vh", background: "linear-gradient(135deg,#0f172a,#1e1b4b,#312e81)", position: "relative", fontFamily: "inherit" },
-  overlay: { position: "absolute", inset: 0 },
-  centerWrap: { position: "relative", zIndex: 2, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "30px" },
-  glassCard: { width: "100%", maxWidth: "480px", padding: "40px", borderRadius: "24px", background: "rgba(255,255,255,0.08)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.12)", color: "#fff" },
-  title: { margin: "0 0 8px", fontSize: "26px", fontWeight: "700" },
-  subtitle: { color: "#94a3b8", marginBottom: "28px", fontSize: "14px" },
-  label: { display: "block", marginBottom: "8px", fontSize: "13px", fontWeight: "600", color: "#e2e8f0" },
-  input: { width: "100%", padding: "12px 14px", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.07)", color: "#fff", fontSize: "14px", outline: "none" },
-  btn: { padding: "13px", border: "none", borderRadius: "12px", background: "linear-gradient(135deg,#8b5cf6,#6366f1)", color: "#fff", fontWeight: "700", cursor: "pointer", fontSize: "15px", marginTop: "8px" },
-  loadingPage: { minHeight: "100vh", background: "linear-gradient(135deg,#0f172a,#312e81)", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" },
-  loader: { width: "40px", height: "40px", border: "3px solid rgba(255,255,255,0.2)", borderTop: "3px solid #fff", borderRadius: "50%", animation: "spin 1s linear infinite" },
-  dashboard: { position: "relative", zIndex: 2, display: "flex", minHeight: "100vh", padding: "18px", gap: "18px" },
-  sidebar: { width: "230px", borderRadius: "20px", padding: "20px", background: "rgba(255,255,255,0.08)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", flexDirection: "column", justifyContent: "space-between", color: "#fff", flexShrink: 0 },
-  brandBox: { display: "flex", gap: "12px", alignItems: "center", marginBottom: "24px" },
-  iconCircleSmall: { width: "40px", height: "40px", borderRadius: "12px", background: "rgba(255,255,255,0.12)", display: "flex", justifyContent: "center", alignItems: "center", fontWeight: "700" },
-  brandTitle: { fontWeight: "700", fontSize: "15px" },
-  brandSub: { fontSize: "11px", color: "#94a3b8" },
-  menu: { padding: "11px 14px", borderRadius: "10px", marginBottom: "4px", cursor: "pointer", color: "#94a3b8", fontSize: "14px", transition: "all 0.2s" },
-  menuActive: { padding: "11px 14px", borderRadius: "10px", marginBottom: "4px", background: "rgba(255,255,255,0.12)", cursor: "pointer", fontWeight: "600", fontSize: "14px", color: "#fff" },
-  profileMini: { display: "flex", gap: "10px", alignItems: "center", paddingTop: "16px", borderTop: "1px solid rgba(255,255,255,0.08)" },
-  avatar: { width: "38px", height: "38px", borderRadius: "50%", background: "linear-gradient(135deg,#8b5cf6,#6366f1)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700", fontSize: "14px" },
-  main: { flex: 1, display: "flex", flexDirection: "column", gap: "16px" },
-  topbar: { padding: "18px 22px", borderRadius: "20px", background: "rgba(255,255,255,0.08)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", justifyContent: "space-between", alignItems: "center" },
-  statusBtn: { padding: "10px 16px", border: "none", borderRadius: "10px", color: "#fff", fontWeight: "600", cursor: "pointer", fontSize: "13px" },
-  pointsBox: { padding: "10px 16px", borderRadius: "10px", background: "linear-gradient(135deg,#8b5cf6,#6366f1)", color: "#fff", fontWeight: "700", fontSize: "13px" },
-  statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: "14px" },
-  statGlass: { padding: "20px", borderRadius: "18px", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff" },
-  sectionGlass: { padding: "20px", borderRadius: "20px", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff" },
-  sectionHeading: { marginTop: 0, marginBottom: "16px", fontSize: "16px", fontWeight: "600" },
-  taskGrid: { display: "grid", gap: "14px" },
-  taskCard: { padding: "16px", borderRadius: "14px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" },
-  taskTop: { display: "flex", justifyContent: "space-between", alignItems: "center" },
-  reward: { padding: "5px 10px", borderRadius: "20px", background: "linear-gradient(135deg,#22c55e,#16a34a)", fontSize: "12px", fontWeight: "700" },
-  taskDesc: { marginTop: "8px", color: "#94a3b8", fontSize: "13px" },
-  taskBottom: { marginTop: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" },
-  btnSmall: { padding: "8px 14px", border: "none", borderRadius: "8px", background: "linear-gradient(135deg,#8b5cf6,#6366f1)", color: "#fff", cursor: "pointer", fontWeight: "600", fontSize: "13px" },
-};
+/* ---------- Task Section ---------- */
+function TaskSection({ title, subtitle, tasks, loading, type, onApply, onEscalate, onSeeAll }) {
+  return (
+    <section className="bg-white/5 border border-white/10 rounded-2xl p-5">
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h3 className="font-semibold text-sm flex items-center gap-2">
+            {type === "direct"
+              ? <CheckCircle size={15} className="text-emerald-400" />
+              : <AlertTriangle size={15} className="text-amber-400" />
+            }
+            {title}
+          </h3>
+          <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>
+        </div>
+        {onSeeAll && (
+          <button onClick={onSeeAll} className="text-xs text-violet-300 hover:text-violet-200 transition">See all →</button>
+        )}
+      </div>
+
+      {loading ? (
+        <p className="text-slate-500 text-sm">Loading tasks...</p>
+      ) : tasks.length > 0 ? (
+        <div className="space-y-3">
+          {tasks.map((task, i) => (
+            <div key={i} className={`border rounded-xl p-4 ${type === "direct"
+                ? "bg-emerald-500/5 border-emerald-500/15"
+                : "bg-amber-500/5 border-amber-500/15"
+              }`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-sm">{task.category}</p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${type === "direct"
+                        ? "bg-emerald-500/15 text-emerald-300"
+                        : "bg-amber-500/15 text-amber-300"
+                      }`}>
+                      {type === "direct" ? "Direct" : "Escalate"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">{task.description}</p>
+                  <p className="text-xs text-slate-500 mt-1">{task.address}</p>
+                </div>
+                <div className="flex flex-col gap-2 flex-shrink-0 items-end">
+                  <span className="text-xs font-semibold text-emerald-300 bg-emerald-500/15 px-2.5 py-1 rounded-full">
+                    +{task.pointsReward} pts
+                  </span>
+                  {type === "direct" ? (
+                    <button
+                      onClick={() => onApply(task.reportId)}
+                      className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-500 to-indigo-500 text-xs font-semibold hover:opacity-90 transition"
+                    >
+                      Help Now
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => onEscalate(task)}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold hover:bg-amber-500/25 transition"
+                    >
+                      <ExternalLink size={11} /> Raise Complaint
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-slate-500 text-sm">No tasks in this category right now.</p>
+      )}
+    </section>
+  );
+}
+
+/* ---------- Rewards Tab ---------- */
+function RewardsTab({ volunteer, directTasks, escalateTasks }) {
+  const pts = volunteer?.points || 0;
+  const TIERS = [
+    { label: "Level 1 — New Volunteer", min: 0, max: 99 },
+    { label: "Level 2 — Active Volunteer", min: 100, max: 299 },
+    { label: "Level 3 — Community Helper", min: 300, max: 499 },
+    { label: "Level 4 — Community Champion", min: 500, max: Infinity },
+  ];
+  const current = TIERS.findLast(t => pts >= t.min) || TIERS[0];
+  const next = TIERS.find(t => t.min > pts);
+  const pct = next ? Math.round(((pts - current.min) / (next.min - current.min)) * 100) : 100;
+
+  const history = volunteer?.history || [];
+  const completed = history.filter(h => h.status === "Completed").length;
+
+  const badges = [
+    history.length >= 1 && { label: "First Task Applied", color: "border-violet-500/30 bg-violet-500/10 text-violet-300" },
+    completed >= 1 && { label: "First Completion", color: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300" },
+    pts >= 100 && { label: "100 Points", color: "border-amber-500/30 bg-amber-500/10 text-amber-300" },
+    pts >= 300 && { label: "300 Points", color: "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-300" },
+  ].filter(Boolean);
+
+  return (
+    <div className="space-y-5">
+      <div className="bg-gradient-to-r from-violet-500/20 to-indigo-500/20 border border-violet-500/20 rounded-2xl p-6">
+        <div className="flex justify-between items-end mb-4">
+          <div>
+            <p className="text-xs text-slate-400 mb-1">Total Points</p>
+            <h2 className="text-5xl font-bold">{pts}</h2>
+          </div>
+          <p className="text-sm text-violet-300 font-semibold">{current.label}</p>
+        </div>
+        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-violet-400 to-indigo-400 rounded-full" style={{ width: `${pct}%` }} />
+        </div>
+        {next && <p className="text-xs text-slate-400 mt-2">{next.min - pts} pts to {next.label}</p>}
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: "Tasks Applied", value: history.length },
+          { label: "Completed", value: completed },
+          { label: "Badges", value: badges.length },
+        ].map((s, i) => (
+          <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+            <p className="text-2xl font-bold">{s.value}</p>
+            <p className="text-xs text-slate-400 mt-1">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+        <h3 className="text-sm font-semibold mb-3">All Levels</h3>
+        <div className="space-y-2">
+          {TIERS.map((tier, i) => (
+            <div key={i} className={`flex justify-between items-center rounded-xl px-4 py-3 border text-sm ${current.label === tier.label ? "bg-violet-500/15 border-violet-500/30 text-white" : "bg-white/5 border-white/10 text-slate-400"
+              }`}>
+              <span>{tier.label}</span>
+              <span className="text-xs">{tier.max === Infinity ? `${tier.min}+ pts` : `${tier.min}–${tier.max} pts`}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {badges.length > 0 && (
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+          <h3 className="text-sm font-semibold mb-3">Earned Badges</h3>
+          <div className="grid grid-cols-2 gap-3">
+            {badges.map((b, i) => (
+              <div key={i} className={`border rounded-xl px-4 py-3 text-xs font-medium ${b.color}`}>{b.label}</div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Settings Tab ---------- */
+function SettingsTab({ volunteer, setVolunteer, apiBase, handleLogout }) {
+  const [notifications, setNotifications] = useState(true);
+  const [locationAccess, setLocationAccess] = useState(true);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    const s = JSON.parse(localStorage.getItem("volSettings") || "{}");
+    if (s.notifications !== undefined) setNotifications(s.notifications);
+    if (s.locationAccess !== undefined) setLocationAccess(s.locationAccess);
+  }, []);
+
+  const handleSave = () => {
+    localStorage.setItem("volSettings", JSON.stringify({ notifications, locationAccess }));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  const Toggle = ({ value, onClick }) => (
+    <button onClick={onClick} className={`w-12 h-6 rounded-full transition-colors relative ${value ? "bg-gradient-to-r from-violet-500 to-indigo-500" : "bg-white/20"}`}>
+      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${value ? "left-7" : "left-1"}`} />
+    </button>
+  );
+
+  return (
+    <div className="max-w-xl space-y-4">
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+        <h3 className="text-sm font-semibold mb-4">Profile</h3>
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between items-center bg-white/5 rounded-xl px-4 py-3">
+            <span className="text-slate-400">Name</span>
+            <span>{volunteer?.name || "—"}</span>
+          </div>
+          <div className="flex justify-between items-center bg-white/5 rounded-xl px-4 py-3">
+            <span className="text-slate-400">Type</span>
+            <span>{volunteer?.type === "NGO_Affiliated" ? `NGO — ${volunteer.ngoName}` : "Individual"}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-3">
+        <h3 className="text-sm font-semibold mb-1">Preferences</h3>
+        {[
+          { label: "Notifications", sub: "New issue alerts", value: notifications, set: setNotifications },
+          { label: "Location Access", sub: "Required for nearby tasks", value: locationAccess, set: setLocationAccess },
+        ].map((item, i) => (
+          <div key={i} className="flex items-center justify-between bg-white/5 rounded-xl px-4 py-3">
+            <div>
+              <p className="text-sm">{item.label}</p>
+              <p className="text-xs text-slate-500">{item.sub}</p>
+            </div>
+            <Toggle value={item.value} onClick={() => item.set(!item.value)} />
+          </div>
+        ))}
+        <button
+          onClick={handleSave}
+          className={`w-full py-2.5 rounded-xl text-sm font-semibold transition ${saved ? "bg-emerald-500/80" : "bg-gradient-to-r from-violet-500 to-indigo-500 hover:opacity-90"}`}
+        >
+          {saved ? "Saved" : "Save Preferences"}
+        </button>
+      </div>
+
+      <button
+        onClick={handleLogout}
+        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-red-500/20 bg-red-500/10 text-red-300 text-sm font-medium hover:bg-red-500/20 transition"
+      >
+        <LogOut size={14} /> Logout
+      </button>
+    </div>
+  );
+}

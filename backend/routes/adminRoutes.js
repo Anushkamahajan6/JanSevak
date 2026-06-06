@@ -5,7 +5,7 @@ const Volunteer = require('../models/volunteerModel');
 
 const router = express.Router();
 
-// ── Auth middleware ──────────────────────────────────────────────────────────
+// Auth middleware
 const verifyAdmin = (req, res, next) => {
   const cookieHeader = req.headers.cookie || '';
   const tokenCookie = cookieHeader.split(';').map(c => c.trim()).find(c => c.startsWith('token='));
@@ -21,21 +21,19 @@ const verifyAdmin = (req, res, next) => {
   }
 };
 
-// ── GET /api/admin/ ──────────────────────────────────────────────────────────
+// GET /api/admin/
 router.get('/', (req, res) => {
   res.send('Admin Dashboard');
 });
 
-// ── GET /api/admin/stats ─────────────────────────────────────────────────────
-// NOTE: No auth guard so the dashboard can always show stats.
-// Add verifyAdmin back once login flow for admins is wired up.
+// GET /api/admin/stats
 router.get('/stats', async (req, res) => {
   try {
     const totalIssues = await Issue.countDocuments();
-    const resolved    = await Issue.countDocuments({ status: 'resolved' });
-    const inProgress  = await Issue.countDocuments({ status: 'in-progress' });
-    const open        = await Issue.countDocuments({ status: { $in: ['open', 'pending'] } });
-    const hotspots    = await Issue.countDocuments({ severity: { $gte: 4 } });
+    const resolved = await Issue.countDocuments({ status: 'resolved' });
+    const inProgress = await Issue.countDocuments({ status: 'in-progress' });
+    const open = await Issue.countDocuments({ status: { $in: ['open', 'pending'] } });
+    const hotspots = await Issue.countDocuments({ severity: { $gte: 4 } });
     const animalCases = await Issue.countDocuments({
       category: { $regex: /animal/i },
       status: { $ne: 'resolved' }
@@ -49,7 +47,7 @@ router.get('/stats', async (req, res) => {
   }
 });
 
-// ── GET /api/admin/issues ────────────────────────────────────────────────────
+// GET /api/admin/issues
 router.get('/issues', async (req, res) => {
   try {
     const issues = await Issue.find().sort({ createdAt: -1 }).lean();
@@ -60,7 +58,7 @@ router.get('/issues', async (req, res) => {
   }
 });
 
-// ── PATCH /api/admin/issues/:id/status ──────────────────────────────────────
+// PATCH /api/admin/issues/:id/status
 router.patch('/issues/:id/status', async (req, res) => {
   try {
     const { status } = req.body;
@@ -77,7 +75,7 @@ router.patch('/issues/:id/status', async (req, res) => {
   }
 });
 
-// ── GET /api/admin/volunteers ────────────────────────────────────────────────
+// GET /api/admin/volunteers
 router.get('/volunteers', async (req, res) => {
   try {
     const volunteers = await Volunteer.find().sort({ createdAt: -1 }).lean();
@@ -88,7 +86,7 @@ router.get('/volunteers', async (req, res) => {
   }
 });
 
-// ── GET /api/admin/issue/:issueId/volunteers ─────────────────────────────────
+// GET /api/admin/issue/:issueId/volunteers
 router.get('/issue/:issueId/volunteers', verifyAdmin, async (req, res) => {
   try {
     const issue = await Issue.findById(req.params.issueId)
@@ -116,7 +114,7 @@ router.get('/issue/:issueId/volunteers', verifyAdmin, async (req, res) => {
   }
 });
 
-// ── POST /api/admin/approve ──────────────────────────────────────────────────
+// POST /api/admin/approve
 // Approve a volunteer for an issue
 // Body: { volunteerId, issueId, approved: true/false }
 router.post('/approve', async (req, res) => {
@@ -133,7 +131,6 @@ router.post('/approve', async (req, res) => {
     const volunteer = await Volunteer.findById(volunteerId);
     if (!volunteer) return res.status(404).json({ error: 'Volunteer not found' });
 
-    // Mark volunteer in requestedVolunteers as approved/rejected
     const requestEntry = issue.requestedVolunteers.find(
       rv => rv.volunteerId.toString() === volunteerId
     );
@@ -148,7 +145,6 @@ router.post('/approve', async (req, res) => {
       issue.status = 'in-progress';
       requestEntry.approved = true;
     } else {
-      // Mark as rejected
       requestEntry.approved = false;
     }
 
@@ -165,8 +161,7 @@ router.post('/approve', async (req, res) => {
   }
 });
 
-// ── POST /api/admin/issue/:issueId/approve/:volunteerId ──────────────────────
-// Legacy endpoint - kept for compatibility
+// POST /api/admin/issue/:issueId/approve/:volunteerId
 router.post('/issue/:issueId/approve/:volunteerId', verifyAdmin, async (req, res) => {
   try {
     const { issueId, volunteerId } = req.params;

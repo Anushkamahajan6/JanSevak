@@ -4,7 +4,6 @@ const Issue = require('../models/Issue');
 
 const router = express.Router();
 
-// ============= MIDDLEWARE =============
 // Verify JWT token from cookies
 const verifyToken = (req, res, next) => {
   const cookieHeader = req.headers.cookie || '';
@@ -26,8 +25,6 @@ const verifyToken = (req, res, next) => {
     return res.status(401).json({ error: 'Invalid token' });
   }
 };
-
-// ============= ENDPOINTS =============
 
 /**
  * 1. GET /api/issues/stats

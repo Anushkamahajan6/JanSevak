@@ -1,4 +1,3 @@
-// models/Issue.js
 const mongoose = require('mongoose');
 
 const IssueSchema = new mongoose.Schema({
@@ -8,18 +7,12 @@ const IssueSchema = new mongoose.Schema({
     title: { type: String },
     description: { type: String },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
+    requiresAuthority: { type: Boolean, default: false },
     upvotes: { type: Number, default: 0 },
     upvotedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'user' }],
     location: {
-        type: {
-            type: String, 
-            enum: ['Point'], 
-            default: 'Point' 
-        },
-        coordinates: {
-            type: [Number], // Must be [lng, lat]
-            required: true
-        },
+        type: { type: String, enum: ['Point'], default: 'Point' },
+        coordinates: { type: [Number], required: true },
         address: { type: String }
     },
     requestedVolunteers: [{
@@ -27,14 +20,13 @@ const IssueSchema = new mongoose.Schema({
         respondedAt: { type: Date, default: Date.now },
         approved: { type: Boolean, default: null }
     }],
-    assignedTo: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Volunteer',
-        default: null
-    }
+    assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Volunteer', default: null },
+    proofUpdates: [{
+        note: { type: String },
+        imageUrl: { type: String },
+        submittedAt: { type: Date, default: Date.now }
+    }]
 }, { timestamps: true });
 
-// This index is MANDATORY for the heatmap and proximity searches
 IssueSchema.index({ location: '2dsphere' });
-
 module.exports = mongoose.model('Issue', IssueSchema);
