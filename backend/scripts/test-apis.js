@@ -17,7 +17,7 @@
 const http = require('http');
 
 // ============= TEST CONFIGURATION =============
-const BASE_URL = 'http://localhost:5000';
+const BASE_URL = '${import.meta.env.VITE_API_BASE_URL}';
 const TEST_USER_EMAIL = 'test@example.com';
 const TEST_USER_PASSWORD = 'password123';
 

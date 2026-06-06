@@ -5,7 +5,7 @@ let sharedSocket = null;
 
 function getSocket() {
   if (!sharedSocket) {
-    sharedSocket = io(import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000', {
+    sharedSocket = io(import.meta.env.VITE_API_BASE_URL || '${import.meta.env.VITE_API_BASE_URL}', {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,

@@ -1,4 +1,4 @@
-const BASE = 'http://localhost:5000/api/admin';
+const BASE = `${import.meta.env.VITE_API_BASE_URL}/api/admin`;
 
 async function apiFetch(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, {

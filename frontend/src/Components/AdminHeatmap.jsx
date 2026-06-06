@@ -22,7 +22,7 @@ const AdminHeatmap = () => {
     setPanelLoading(true);
     setPanel(null);
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/issue/${issueId}/volunteers`, {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/admin/issue/${issueId}/volunteers`, {
         credentials: 'include',
       });
       console.log('Panel response status:', res.status);
@@ -46,7 +46,7 @@ const AdminHeatmap = () => {
     setApproving(volunteerId);
     try {
       const res = await fetch(
-        `http://localhost:5000/api/admin/issue/${panel.issue._id}/approve/${volunteerId}`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/admin/issue/${panel.issue._id}/approve/${volunteerId}`,
         { method: 'POST', credentials: 'include' }
       );
       const data = await res.json();
@@ -92,7 +92,7 @@ const AdminHeatmap = () => {
     mapRef.current = map;
 
     map.on('load', () => {
-      fetch('http://localhost:5000/api/heatmap')
+      fetch('${import.meta.env.VITE_API_BASE_URL}/api/heatmap')
         .then(r => r.json())
         .then(geojson => {
           console.log('Loaded features:', geojson.features?.length);
