@@ -24,7 +24,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIO(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:5174", "https://jansevak1.onrender.com/"],
+    origin: ["http://localhost:5173", "http://localhost:5174", "https://jansevak1.onrender.com"],
     credentials: true
   }
 });
@@ -41,7 +41,7 @@ const PORT = process.env.PORT || 5000;
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:5174", "https://jansevak1.onrender.com/"],
+  origin: ["http://localhost:5173", "http://localhost:5174", "https://jansevak1.onrender.com"],
   credentials: true
 }));
 
