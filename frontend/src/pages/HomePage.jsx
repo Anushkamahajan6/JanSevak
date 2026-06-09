@@ -53,25 +53,25 @@ function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-white">
 
       {/* Nav */}
       <nav className="sticky top-0 z-50 bg-white/5 backdrop-blur-xl border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div>
-            <span className="text-xl font-bold tracking-tight">JanSevak</span>
-            <span className="ml-2 text-xs text-slate-400 font-medium">Community Issue Portal</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center gap-4">
+          <div className="flex items-baseline gap-2 min-w-0">
+            <span className="text-lg sm:text-xl font-bold tracking-tight whitespace-nowrap">JanSevak</span>
+            <span className="hidden sm:inline text-xs text-slate-400 font-medium">Community Issue Portal</span>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-2 flex-shrink-0">
             <button
               onClick={() => navigate("/login")}
-              className="px-5 py-2 rounded-xl bg-white/10 border border-white/10 text-sm font-medium hover:bg-white/15 transition"
+              className="px-3 sm:px-5 py-2 rounded-xl bg-white/10 border border-white/10 text-xs sm:text-sm font-medium hover:bg-white/15 transition"
             >
               Login
             </button>
             <button
               onClick={() => navigate("/signup")}
-              className="px-5 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 text-sm font-semibold hover:opacity-90 transition"
+              className="px-3 sm:px-5 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 text-xs sm:text-sm font-semibold hover:opacity-90 transition"
             >
               Get Started
             </button>
@@ -183,16 +183,10 @@ function HomePage() {
               </ul>
               <div className="flex gap-2">
                 <button
-                  onClick={() => navigate(role.loginPath)}
-                  className="flex-1 py-2.5 rounded-xl bg-white/10 border border-white/10 text-sm font-medium hover:bg-white/15 transition"
-                >
-                  Login
-                </button>
-                <button
                   onClick={() => navigate(role.signupPath)}
-                  className="flex-1 py-2.5 rounded-xl bg-white/15 border border-white/20 text-sm font-semibold hover:bg-white/20 transition"
+                  className="w-full py-2.5 rounded-xl bg-white/15 border border-white/20 text-sm font-semibold hover:bg-white/20 transition"
                 >
-                  Sign Up
+                  Join as {role.title}
                 </button>
               </div>
             </div>
