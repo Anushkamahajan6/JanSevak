@@ -13,9 +13,7 @@ const {
 const router = express.Router();
 
 const verifyToken = (req, res, next) => {
-  const cookieHeader = req.headers.cookie || '';
-  const token = cookieHeader.split(';').map(c => c.trim()).find(c => c.startsWith('token='));
-  const tokenValue = token ? token.substring('token='.length) : null;
+  const tokenValue = req.cookies?.token;
   if (!tokenValue) return res.status(401).json({ error: 'Not authenticated' });
   try {
     req.user = jwt.verify(tokenValue, process.env.JWT_SECRET);

@@ -6,6 +6,7 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const http = require('http');
 const socketIO = require('socket.io');
+const cookieParser = require('cookie-parser');
 
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
@@ -21,10 +22,16 @@ dotenv.config();
 connectDB();
 
 const app = express();
+app.set("trust proxy", 1);
+
 const server = http.createServer(app);
 const io = socketIO(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:5174", "https://jansevak1.onrender.com"],
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "https://jansevak1.onrender.com"
+    ],
     credentials: true
   }
 });
@@ -38,8 +45,6 @@ app.use((req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
 app.use(cors({
   origin: [
     "http://localhost:5173",
@@ -48,6 +53,9 @@ app.use(cors({
   ],
   credentials: true
 }));
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
+app.use(cookieParser());
 
 app.use('/twilio', twilioRoutes);
 app.use('/api/auth', authRoutes);
