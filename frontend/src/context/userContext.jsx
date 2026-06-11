@@ -11,7 +11,16 @@ export const UserProvider = ({ children }) => {
       return null;
     }
   });
-  const [loading, setLoading] = useState(true);
+
+  const [user, setUserState] = useState(() => {
+    try {
+      const stored = localStorage.getItem("jansevak_user");
+      return stored ? JSON.parse(stored) : null;
+    } catch { return null; }
+  });
+  const [loading, setLoading] = useState(() => {
+    return !localStorage.getItem("jansevak_user");
+  });
 
   const setUser = (userData) => {
     if (userData) {

@@ -1,3 +1,6 @@
+const BACKEND = import.meta.env.VITE_API_BASE_URL;
+fetch(`${BACKEND}/api/auth/test`).catch(() => {}); 
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AdminLayout from "./layouts/AdminLayout";
 import PrivateRoute from "./Components/PrivateRoute";

@@ -206,7 +206,14 @@ function Login() {
       const data = await res.json();
       if (!res.ok) { setError(data.message); setLoading(false); return; }
 
-      setUser({ id: data.user.id, name: data.user.name, role: data.user.role });
+      localStorage.setItem("jansevak_user", JSON.stringify({
+        id: data.user.id,
+        name: data.user.name,
+        email: data.user.email,
+        role: data.user.role
+      }));
+
+      setUser({ id: data.user.id, name: data.user.name, email: data.user.email, role: data.user.role });
 
       if (data.user.role === "volunteer") navigate("/volunteer");
       else if (data.user.role === "user") navigate("/user");
