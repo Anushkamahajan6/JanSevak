@@ -12,12 +12,6 @@ export const UserProvider = ({ children }) => {
     }
   });
 
-  const [user, setUserState] = useState(() => {
-    try {
-      const stored = localStorage.getItem("jansevak_user");
-      return stored ? JSON.parse(stored) : null;
-    } catch { return null; }
-  });
   const [loading, setLoading] = useState(() => {
     return !localStorage.getItem("jansevak_user");
   });
@@ -37,17 +31,13 @@ export const UserProvider = ({ children }) => {
         credentials: "include",
       });
       if (!res.ok) {
-        // Cookie invalid/expired — clear stored user
         setUser(null);
-        setLoading(false);
         return;
       }
       const data = await res.json();
-      const userData = { id: data.userId, name: data.name, email: data.email, role: data.role };
-      setUser(userData);
+      setUser({ id: data.userId, name: data.name, email: data.email, role: data.role });
     } catch (err) {
       console.warn("Profile fetch error:", err.message);
-      // Network error — keep localStorage user so app doesn't break
     } finally {
       setLoading(false);
     }
