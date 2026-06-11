@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../context/userContext";
 import {
-  LayoutDashboard, Map, ClipboardList, Trophy, Settings,
+  LayoutDashboard, Map, ClipboardList, Trophy, Settings, Menu, X,
   LogOut, Bell, CheckCircle, AlertTriangle, ExternalLink
 } from "lucide-react";
 import HeatmapView from "../Components/HeatmapView";
@@ -27,6 +27,7 @@ export default function VolunteerPage() {
   const [volunteer, setVolunteer] = useState(null);
   const [isActive, setIsActive] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [allTasks, setAllTasks] = useState([]);
   const [tasksLoading, setTasksLoading] = useState(true);
@@ -172,7 +173,7 @@ export default function VolunteerPage() {
     setUser(null);
     navigate("/");
   };
-  
+
   // Split tasks
   const directTasks = allTasks.filter(t => DIRECT_CATEGORIES.includes(t.category));
   const escalateTasks = allTasks.filter(t => !DIRECT_CATEGORIES.includes(t.category));
@@ -262,7 +263,6 @@ export default function VolunteerPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-purple-950 flex text-white">
 
-      {/* Notification toast */}
       {notification && (
         <div className="fixed top-5 right-5 z-50 bg-red-500 text-white px-5 py-4 rounded-2xl shadow-xl max-w-xs">
           <p className="font-semibold text-sm">{notification.title}</p>
@@ -270,165 +270,129 @@ export default function VolunteerPage() {
         </div>
       )}
 
-      {/* Sidebar */}
-      <aside className="w-64 bg-white/5 border-r border-white/10 flex flex-col flex-shrink-0">
-        <div className="p-6 border-b border-white/10">
-          <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center font-bold text-sm">J</div>
-          <h1 className="mt-3 font-bold text-lg">JanSevak</h1>
-          <p className="text-xs text-slate-400">Volunteer Hub</p>
-        </div>
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/60 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
 
+      {/* Sidebar */}
+      <aside className={`fixed top-0 left-0 h-full w-64 bg-slate-900 border-r border-slate-800 flex flex-col z-30 transform transition-transform duration-300 lg:translate-x-0 lg:static lg:z-auto
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+        `}>
+        <div className="p-6 border-b border-white/10 flex items-center justify-between">
+          <div>
+            <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center font-bold text-sm">J</div>
+            <h1 className="mt-3 font-bold text-lg">JanSevak</h1>
+            <p className="text-xs text-slate-400">Volunteer Hub</p>
+          </div>
+          <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-slate-400 hover:text-white">
+            <X size={20} />
+          </button>
+        </div>
         <nav className="p-4 space-y-1 flex-1">
           {navItems.map(item => {
             const Icon = item.icon;
             return (
-              <button
-                key={item.key}
-                onClick={() => setActiveTab(item.key)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition ${activeTab === item.key
-                  ? "bg-white/15 text-white font-medium"
-                  : "text-slate-400 hover:bg-white/10 hover:text-white"
-                  }`}
-              >
+              <button key={item.key} onClick={() => { setActiveTab(item.key); setSidebarOpen(false); }}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition ${activeTab === item.key ? "bg-white/15 text-white font-medium" : "text-slate-400 hover:bg-white/10 hover:text-white"
+                  }`}>
                 <Icon size={16} /> {item.label}
               </button>
             );
           })}
         </nav>
-
         <div className="p-4 border-t border-white/10 space-y-2">
           <div className="flex gap-3 items-center">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 flex items-center justify-center text-xs font-bold flex-shrink-0">
-              {initials}
-            </div>
+            <div className="w-9 h-9 rounded-full bg-gradient-to-r from-violet-500 to-indigo-500 flex items-center justify-center text-xs font-bold flex-shrink-0">{initials}</div>
             <div className="min-w-0">
               <p className="font-semibold text-sm truncate">{volunteer?.name || "—"}</p>
               <p className="text-xs text-slate-400">{isActive ? "Active" : "Inactive"}</p>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-slate-400 hover:bg-white/10 hover:text-white transition"
-          >
+          <button onClick={handleLogout} className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-slate-400 hover:bg-white/10 hover:text-white transition">
             <LogOut size={14} /> Logout
           </button>
         </div>
       </aside>
 
       {/* Main */}
-      <main className="flex-1 overflow-auto">
-        {/* Topbar */}
-        <header className="bg-white/5 border-b border-white/10 px-6 py-4 flex justify-between items-center">
-          <div>
-            <h2 className="text-lg font-bold">Welcome, {volunteer?.name?.split(" ")[0] || "—"}</h2>
-            <p className="text-xs text-slate-400">
-              {volunteer?.type === "NGO_Affiliated" ? `Representing ${volunteer?.ngoName}` : "Individual Volunteer"}
-            </p>
+      <main className="flex-1 overflow-auto min-w-0">
+        <header className="bg-white/5 border-b border-white/10 px-4 sm:px-6 py-4 flex justify-between items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <button onClick={() => setSidebarOpen(true)} className="lg:hidden text-slate-400 hover:text-white flex-shrink-0">
+              <Menu size={22} />
+            </button>
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-lg font-bold truncate">Welcome, {volunteer?.name?.split(" ")[0] || "—"}</h2>
+              <p className="text-xs text-slate-400 hidden sm:block">
+                {volunteer?.type === "NGO_Affiliated" ? `Representing ${volunteer?.ngoName}` : "Individual Volunteer"}
+              </p>
+            </div>
           </div>
-          <div className="flex gap-3 items-center">
+          <div className="flex gap-2 items-center flex-shrink-0">
             <button className="w-9 h-9 rounded-xl bg-white/10 border border-white/10 flex items-center justify-center hover:bg-white/15 transition">
               <Bell size={16} />
             </button>
-            <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-500/20 to-indigo-500/20 border border-violet-500/20 text-sm font-semibold">
+            <div className="px-3 py-2 rounded-xl bg-gradient-to-r from-violet-500/20 to-indigo-500/20 border border-violet-500/20 text-xs sm:text-sm font-semibold">
               {volunteer?.points || 0} pts
             </div>
-            <button
-              onClick={toggleStatus}
-              disabled={statusLoading}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition disabled:opacity-50 border ${isActive
-                ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25"
-                : "bg-white/10 border-white/10 text-slate-300 hover:bg-white/15"
-                }`}
-            >
+            <button onClick={toggleStatus} disabled={statusLoading}
+              className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition disabled:opacity-50 border ${isActive ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300" : "bg-white/10 border-white/10 text-slate-300"
+                }`}>
               {isActive ? "Active" : "Go Active"}
             </button>
           </div>
         </header>
 
-        <div className="p-6 space-y-6">
-
-          {/* Stats — always visible */}
-          <section className="grid grid-cols-3 gap-4">
+        <div className="p-4 sm:p-6 space-y-5 sm:space-y-6">
+          <section className="grid grid-cols-3 gap-3 sm:gap-4">
             {[
               { label: "Direct Tasks", value: tasksLoading ? "—" : directTasks.length, sub: "Volunteer can resolve" },
               { label: "Escalate Tasks", value: tasksLoading ? "—" : escalateTasks.length, sub: "Needs authority" },
               { label: "Points Earned", value: volunteer?.points || 0, sub: "Completed tasks" },
             ].map((s, i) => (
-              <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-5">
-                <h3 className="text-3xl font-bold">{s.value}</h3>
-                <p className="text-sm text-slate-300 mt-1">{s.label}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{s.sub}</p>
+              <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-3 sm:p-5">
+                <h3 className="text-xl sm:text-3xl font-bold">{s.value}</h3>
+                <p className="text-xs sm:text-sm text-slate-300 mt-1">{s.label}</p>
+                <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">{s.sub}</p>
               </div>
             ))}
           </section>
 
-          {/* Dashboard tab */}
           {activeTab === "dashboard" && (
             <>
               {hasMapboxToken && (
-                <section className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                <section className="bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-5">
                   <h3 className="font-semibold text-sm mb-4">Live Issue Heatmap</h3>
                   <div className="rounded-xl overflow-hidden"><HeatmapView volunteer={volunteer} /></div>
                 </section>
               )}
-
-              <TaskSection
-                title="Direct Action Tasks"
-                subtitle="Volunteer can resolve without authority"
-                tasks={directTasks.slice(0, 3)}
-                loading={tasksLoading}
-                type="direct"
-                onApply={handleApply}
-                onEscalate={handleEscalate}
-                onSeeAll={() => setActiveTab("tasks")}
-              />
+              <TaskSection title="Direct Action Tasks" subtitle="Volunteer can resolve without authority"
+                tasks={directTasks.slice(0, 3)} loading={tasksLoading} type="direct"
+                onApply={handleApply} onEscalate={handleEscalate} onSeeAll={() => setActiveTab("tasks")} />
             </>
           )}
 
-          {/* Heatmap tab */}
           {activeTab === "heatmap" && (
-            <section className="bg-white/5 border border-white/10 rounded-2xl p-5">
+            <section className="bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-5">
               <h3 className="font-semibold text-sm mb-4">Live Issue Heatmap</h3>
               {hasMapboxToken
                 ? <div className="rounded-xl overflow-hidden"><HeatmapView /></div>
-                : <p className="text-slate-500 text-sm text-center py-10">Map token not configured. Add VITE_MAPBOX_TOKEN to your .env</p>
-              }
+                : <p className="text-slate-500 text-sm text-center py-10">Map token not configured.</p>}
             </section>
           )}
 
-          {/* Tasks tab */}
           {activeTab === "tasks" && (
             <div className="space-y-6">
-              <TaskSection
-                title="Direct Action Tasks"
-                subtitle="You can resolve these yourself — clean up, remove, fix"
-                tasks={directTasks}
-                loading={tasksLoading}
-                type="direct"
-                onApply={handleApply}
-                onEscalate={handleEscalate}
-              />
-              <TaskSection
-                title="Authority Escalation Tasks"
-                subtitle="These require govt / organisation intervention — follow up and raise complaint"
-                tasks={escalateTasks}
-                loading={tasksLoading}
-                type="escalate"
-                onApply={handleApply}
-                onEscalate={handleEscalate}
-              />
+              <TaskSection title="Direct Action Tasks" subtitle="You can resolve these yourself"
+                tasks={directTasks} loading={tasksLoading} type="direct" onApply={handleApply} onEscalate={handleEscalate} />
+              <TaskSection title="Authority Escalation Tasks" subtitle="Requires govt / organisation intervention"
+                tasks={escalateTasks} loading={tasksLoading} type="escalate" onApply={handleApply} onEscalate={handleEscalate} />
             </div>
           )}
 
-          {/* Rewards tab */}
-          {activeTab === "rewards" && (
-            <RewardsTab volunteer={volunteer} directTasks={directTasks} escalateTasks={escalateTasks} />
-          )}
-
-          {/* Settings tab */}
-          {activeTab === "settings" && (
-            <SettingsTab volunteer={volunteer} setVolunteer={setVolunteer} apiBase={apiBase} handleLogout={handleLogout} />
-          )}
+          {activeTab === "rewards" && <RewardsTab volunteer={volunteer} directTasks={directTasks} escalateTasks={escalateTasks} />}
+          {activeTab === "settings" && <SettingsTab volunteer={volunteer} setVolunteer={setVolunteer} apiBase={apiBase} handleLogout={handleLogout} />}
         </div>
       </main>
     </div>
