@@ -7,9 +7,7 @@ export const UserProvider = ({ children }) => {
     try {
       const stored = localStorage.getItem("jansevak_user");
       return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   });
 
   const [loading, setLoading] = useState(() => {
@@ -21,19 +19,19 @@ export const UserProvider = ({ children }) => {
       localStorage.setItem("jansevak_user", JSON.stringify(userData));
     } else {
       localStorage.removeItem("jansevak_user");
+      localStorage.removeItem("jansevak_token");
     }
     setUserState(userData);
   };
 
   const fetchUser = async () => {
     try {
+      const token = localStorage.getItem("jansevak_token");
+      if (!token) { setLoading(false); return; }
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/user/profile`, {
-        credentials: "include",
+        headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) {
-        setUser(null);
-        return;
-      }
+      if (!res.ok) { setUser(null); return; }
       const data = await res.json();
       setUser({ id: data.userId, name: data.name, email: data.email, role: data.role });
     } catch (err) {

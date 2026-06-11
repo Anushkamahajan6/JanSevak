@@ -200,18 +200,15 @@ function Login() {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.message); setLoading(false); return; }
 
-      // These 3 lines must be in this exact order
+      localStorage.setItem("jansevak_token", data.token);
       localStorage.setItem("jansevak_user", JSON.stringify({
-        id: data.user.id,
-        name: data.user.name,
-        email: data.user.email,
-        role: data.user.role
+        id: data.user.id, name: data.user.name,
+        email: data.user.email, role: data.user.role
       }));
       setUser({ id: data.user.id, name: data.user.name, email: data.user.email, role: data.user.role });
 

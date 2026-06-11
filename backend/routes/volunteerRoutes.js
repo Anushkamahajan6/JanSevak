@@ -3,17 +3,17 @@ const jwt = require('jsonwebtoken');
 const Volunteer = require('../models/volunteerModel');
 const Issue = require('../models/Issue');
 const {
-  getNearbyTasks,
-  applyForTask,
-  requestMoreVolunteers,
-  submitProof,
-  respondToIssue
+  getNearbyTasks, applyForTask, requestMoreVolunteers,
+  submitProof, respondToIssue
 } = require('../controllers/volunteerController');
 
 const router = express.Router();
 
 const verifyToken = (req, res, next) => {
-  const tokenValue = req.cookies?.token;
+  const authHeader = req.headers.authorization;
+  const tokenValue = authHeader?.startsWith("Bearer ")
+    ? authHeader.substring(7)
+    : req.cookies?.token;
   if (!tokenValue) return res.status(401).json({ error: 'Not authenticated' });
   try {
     req.user = jwt.verify(tokenValue, process.env.JWT_SECRET);
@@ -23,7 +23,6 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-// GET /api/volunteer/profile — fetch profile of logged-in volunteer
 router.get('/profile', verifyToken, async (req, res) => {
   try {
     const volunteer = await Volunteer.findOne({ userId: req.user.id });
@@ -35,24 +34,15 @@ router.get('/profile', verifyToken, async (req, res) => {
   }
 });
 
-// POST /api/volunteer/profile — create profile (only once, linked to user)
 router.post('/profile', verifyToken, async (req, res) => {
   try {
     const { name, type, ngoName, skills } = req.body;
-
     const existing = await Volunteer.findOne({ userId: req.user.id });
     if (existing) return res.status(400).json({ error: 'Profile already exists' });
 
     const newVolunteer = await Volunteer.create({
-      userId: req.user.id,
-      name,
-      type,
-      ngoName,
-      skills,
-      points: 0,
-      rating: 0
+      userId: req.user.id, name, type, ngoName, skills, points: 0, rating: 0
     });
-
     res.status(201).json({ message: 'Profile created successfully', volunteer: newVolunteer });
   } catch (err) {
     console.error('Create volunteer profile error:', err);
@@ -66,26 +56,19 @@ router.post('/request-more', requestMoreVolunteers);
 router.post('/submit-proof', submitProof);
 router.post('/respond', respondToIssue);
 
-// PATCH /api/volunteer/active
 router.patch('/active', verifyToken, async (req, res) => {
   try {
     const { isActive } = req.body;
     const volunteer = await Volunteer.findOneAndUpdate(
-      { userId: req.user.id },
-      { isActive },
-      { new: true }
+      { userId: req.user.id }, { isActive }, { new: true }
     );
     if (!volunteer) return res.status(404).json({ error: 'Volunteer not found' });
-    res.json({
-      message: isActive ? 'You are now Active' : 'You are now Offline',
-      volunteer
-    });
+    res.json({ message: isActive ? 'You are now Active' : 'You are now Offline', volunteer });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// POST /api/volunteer/express-interest
 router.post('/express-interest', verifyToken, async (req, res) => {
   try {
     const { issueId } = req.body;
@@ -102,7 +85,6 @@ router.post('/express-interest', verifyToken, async (req, res) => {
 
     issue.requestedVolunteers.push({ volunteerId: volunteer._id, respondedAt: new Date() });
     await issue.save();
-
     res.json({ message: 'Interest registered. Admin will review and assign you.' });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });

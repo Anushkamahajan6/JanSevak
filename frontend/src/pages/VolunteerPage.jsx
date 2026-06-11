@@ -13,6 +13,11 @@ const DIRECT_CATEGORIES = [
   "Public Property Damage", "Cleanliness", "Waterlogging", "Other",
 ];
 
+const getAuthHeaders = () => ({
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${localStorage.getItem("jansevak_token")}`
+});
+
 export default function VolunteerPage() {
   const navigate = useNavigate();
   const { user, setUser, loading: userLoading } = useUser();
@@ -46,7 +51,7 @@ export default function VolunteerPage() {
   // Fetch volunteer profile
   useEffect(() => {
     if (!user || user.role !== "volunteer") return;
-    fetch(`${apiBase}/api/volunteer/profile`, { credentials: "include" })
+    fetch(`${apiBase}/api/volunteer/profile`, { headers: getAuthHeaders() })
       .then(r => r.json())
       .then(d => {
         if (d.volunteer) {
@@ -62,7 +67,7 @@ export default function VolunteerPage() {
   // Fetch tasks once registered
   useEffect(() => {
     if (!isRegistered) return;
-    fetch(`${apiBase}/api/volunteer/tasks`, { credentials: "include" })
+    fetch(`${apiBase}/api/volunteer/tasks`, { headers: getAuthHeaders() })
       .then(r => r.json())
       .then(d => setAllTasks(d.tasks || []))
       .catch(console.error)
@@ -106,8 +111,7 @@ export default function VolunteerPage() {
     try {
       const res = await fetch(`${apiBase}/api/volunteer/profile`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: getAuthHeaders(),
         body: JSON.stringify(formData),
       });
       const data = await res.json();
@@ -124,8 +128,7 @@ export default function VolunteerPage() {
     try {
       const res = await fetch(`${apiBase}/api/volunteer/apply`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: getAuthHeaders(),
         body: JSON.stringify({ volunteerId: volunteer?._id, taskId }),
       });
       const data = await res.json();
@@ -148,8 +151,7 @@ export default function VolunteerPage() {
     try {
       const res = await fetch(`${apiBase}/api/volunteer/active`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: getAuthHeaders(),
         body: JSON.stringify({ isActive: !isActive }),
       });
       const data = await res.json();
@@ -165,12 +167,12 @@ export default function VolunteerPage() {
   };
 
   const handleLogout = async () => {
-    await fetch(`${apiBase}/api/auth/logout`, { method: "POST", credentials: "include" });
+    localStorage.removeItem("jansevak_token");
     localStorage.removeItem("jansevak_user");
     setUser(null);
     navigate("/");
   };
-
+  
   // Split tasks
   const directTasks = allTasks.filter(t => DIRECT_CATEGORIES.includes(t.category));
   const escalateTasks = allTasks.filter(t => !DIRECT_CATEGORIES.includes(t.category));
