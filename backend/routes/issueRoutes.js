@@ -6,22 +6,12 @@ const router = express.Router();
 
 // Verify JWT token from cookies
 const verifyToken = (req, res, next) => {
-  const cookieHeader = req.headers.cookie || '';
-  const tokenCookie = cookieHeader
-    .split(';')
-    .map((c) => c.trim())
-    .find((c) => c.startsWith('token='));
-  const token = tokenCookie ? tokenCookie.substring('token='.length) : null;
-
-  if (!token) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
+  const token = req.cookies?.token;
+  if (!token) return res.status(401).json({ error: 'Not authenticated' });
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // Attach user info to request
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
     next();
-  } catch (err) {
+  } catch {
     return res.status(401).json({ error: 'Invalid token' });
   }
 };

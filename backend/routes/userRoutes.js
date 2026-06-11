@@ -5,12 +5,10 @@ const User = require('../models/User');
 const router = express.Router();
 
 const verifyToken = (req, res, next) => {
-  const cookieHeader = req.headers.cookie || '';
-  const token = cookieHeader.split(';').map(c => c.trim()).find(c => c.startsWith('token='));
-  const tokenValue = token ? token.substring('token='.length) : null;
-  if (!tokenValue) return res.status(401).json({ error: 'Not authenticated' });
+  const token = req.cookies?.token;
+  if (!token) return res.status(401).json({ error: 'Not authenticated' });
   try {
-    req.user = jwt.verify(tokenValue, process.env.JWT_SECRET);
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
     next();
   } catch {
     return res.status(401).json({ error: 'Invalid token' });

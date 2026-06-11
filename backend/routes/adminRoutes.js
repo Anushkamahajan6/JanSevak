@@ -7,9 +7,7 @@ const router = express.Router();
 
 // Auth middleware
 const verifyAdmin = (req, res, next) => {
-  const cookieHeader = req.headers.cookie || '';
-  const tokenCookie = cookieHeader.split(';').map(c => c.trim()).find(c => c.startsWith('token='));
-  const token = tokenCookie ? tokenCookie.substring('token='.length) : null;
+  const token = req.cookies?.token;
   if (!token) return res.status(401).json({ error: 'Not authenticated' });
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);

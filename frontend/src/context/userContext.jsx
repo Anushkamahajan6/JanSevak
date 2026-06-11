@@ -3,19 +3,42 @@ import { createContext, useContext, useEffect, useState } from "react";
 const UserContext = createContext();
 
 export const UserProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUserState] = useState(() => {
+    try {
+      const stored = localStorage.getItem("jansevak_user");
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
+
+  const setUser = (userData) => {
+    if (userData) {
+      localStorage.setItem("jansevak_user", JSON.stringify(userData));
+    } else {
+      localStorage.removeItem("jansevak_user");
+    }
+    setUserState(userData);
+  };
 
   const fetchUser = async () => {
     try {
       const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/user/profile`, {
         credentials: "include",
       });
-      if (!res.ok) { setLoading(false); return; }
+      if (!res.ok) {
+        // Cookie invalid/expired — clear stored user
+        setUser(null);
+        setLoading(false);
+        return;
+      }
       const data = await res.json();
-      setUser({ id: data.userId, name: data.name, email: data.email, role: data.role });
+      const userData = { id: data.userId, name: data.name, email: data.email, role: data.role };
+      setUser(userData);
     } catch (err) {
       console.warn("Profile fetch error:", err.message);
+      // Network error — keep localStorage user so app doesn't break
     } finally {
       setLoading(false);
     }

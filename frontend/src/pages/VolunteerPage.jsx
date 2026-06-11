@@ -166,6 +166,7 @@ export default function VolunteerPage() {
 
   const handleLogout = async () => {
     await fetch(`${apiBase}/api/auth/logout`, { method: "POST", credentials: "include" });
+    localStorage.removeItem("jansevak_user");
     setUser(null);
     navigate("/");
   };
@@ -283,8 +284,8 @@ export default function VolunteerPage() {
                 key={item.key}
                 onClick={() => setActiveTab(item.key)}
                 className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition ${activeTab === item.key
-                    ? "bg-white/15 text-white font-medium"
-                    : "text-slate-400 hover:bg-white/10 hover:text-white"
+                  ? "bg-white/15 text-white font-medium"
+                  : "text-slate-400 hover:bg-white/10 hover:text-white"
                   }`}
               >
                 <Icon size={16} /> {item.label}
@@ -333,8 +334,8 @@ export default function VolunteerPage() {
               onClick={toggleStatus}
               disabled={statusLoading}
               className={`px-4 py-2 rounded-xl text-sm font-semibold transition disabled:opacity-50 border ${isActive
-                  ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25"
-                  : "bg-white/10 border-white/10 text-slate-300 hover:bg-white/15"
+                ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25"
+                : "bg-white/10 border-white/10 text-slate-300 hover:bg-white/15"
                 }`}
             >
               {isActive ? "Active" : "Go Active"}
@@ -458,16 +459,16 @@ function TaskSection({ title, subtitle, tasks, loading, type, onApply, onEscalat
         <div className="space-y-3">
           {tasks.map((task, i) => (
             <div key={i} className={`border rounded-xl p-4 ${type === "direct"
-                ? "bg-emerald-500/5 border-emerald-500/15"
-                : "bg-amber-500/5 border-amber-500/15"
+              ? "bg-emerald-500/5 border-emerald-500/15"
+              : "bg-amber-500/5 border-amber-500/15"
               }`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-sm">{task.category}</p>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${type === "direct"
-                        ? "bg-emerald-500/15 text-emerald-300"
-                        : "bg-amber-500/15 text-amber-300"
+                      ? "bg-emerald-500/15 text-emerald-300"
+                      : "bg-amber-500/15 text-amber-300"
                       }`}>
                       {type === "direct" ? "Direct" : "Escalate"}
                     </span>
